@@ -21,29 +21,31 @@ struct LogInView: View {
                     Text("Log In")
                         .font(.largeTitle)
                         .bold(true)
-                        
-                    TextField("Email", text: $email)
-                        .padding(.vertical)
-                        .padding(.horizontal, 24)
-                        .background(Color(UIColor.systemGray6))
-                        .cornerRadius(10)
-                        .padding(.horizontal, 20)
-                    SecureField("Password", text: $password)
-                        .padding(.vertical)
-                        .padding(.horizontal, 24)
-                        .background(Color(UIColor.systemGray6))
-                        .cornerRadius(10)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
                     
-                    NavigationLink() {
-                        
-                    } label: {
-                        Text("Forgot Your Password")
-                            .font(.caption)
-                            .foregroundColor(Color(#colorLiteral(red: 0.09412650019, green: 0.1988208294, blue: 1, alpha: 1)))
-                            .underline()
+                    VStack() {
+                        TextField("Email", text: $email)
+                            .padding(.vertical)
+                            .padding(.horizontal, 24)
+                            .background(Color(UIColor.systemGray6))
+                            .cornerRadius(10)
+                        SecureField("Password", text: $password)
+                            .padding(.vertical)
+                            .padding(.horizontal, 24)
+                            .background(Color(UIColor.systemGray6))
+                            .cornerRadius(10)
+                            .padding(.vertical, 10)
+                
+                        NavigationLink() {
+                            ForgotPasswordView()
+                        } label: {
+                            Text("Forgot Your Password")
+                                .font(.caption)
+                                .foregroundColor(Color(#colorLiteral(red: 0.09412650019, green: 0.1988208294, blue: 1, alpha: 1)))
+                                .underline()
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                        }
                     }
+                    .padding(.horizontal, 20)
                     
                     NavigationLink() {
                         HomeView()
@@ -57,6 +59,18 @@ struct LogInView: View {
                             .cornerRadius(10)
                             .padding(10)
                     }
+                    
+                    
+                    
+                    NavigationLink() {
+                        SignInView()
+                    } label: {
+                        Text("Don't Have Account?")
+                            .foregroundColor(.black)
+                        Text("Sign Up")
+                            .foregroundColor(Color(#colorLiteral(red: 0.937254902, green: 0.862745098, blue: 0.1921568627, alpha: 1)))
+                    }
+                    .padding()
                 }
             }
         }
