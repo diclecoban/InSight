@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct PageOneView: View {
+    @Binding var isLoggedIn: Bool
     @State var email: String = ""
     @State var firstName: String = ""
     @State var lastName: String = ""
@@ -54,12 +55,24 @@ struct PageOneView: View {
                     .cornerRadius(10)
                     .padding(.horizontal, 24)
                 
-                
+                NavigationLink {
+                    PageTwoView(isLoggedIn: $isLoggedIn)
+                } label: {
+                    Text("Next")
+                        .font(.title3.bold())
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 18)
+                        .background(Color(red: 1, green: 0.176, blue: 0.333))
+                        .cornerRadius(30)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 16)
+                }
             }
         }
     }
 }
 
 #Preview {
-    PageOneView()
+    PageOneView(isLoggedIn: .constant(false))
 }

@@ -95,11 +95,15 @@ struct LoginView: View {
                 HStack(spacing: 4) {
                     Text("Don't Have Account?")
                         .foregroundColor(.black.opacity(0.7))
-                    Button("Sign Up") { }
-                        .foregroundColor(.yellow)
-                        .bold()
+                    NavigationLink {
+                        PageOneView(isLoggedIn: $isLoggedIn)
+                    } label: {
+                        Text("Sign Up")
+                            .foregroundColor(.yellow)
+                            .bold()
+                            .font(.subheadline)
+                    }
                 }
-                .font(.subheadline)
                 .padding(.bottom, 24)
             }
         }
