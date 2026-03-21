@@ -28,7 +28,7 @@ struct ProductPageOneView: View {
     }
     var body: some View {
         ZStack(alignment: .top) {
-            Color(red: 0.459, green: 0.643, blue: 0.533)
+            Color(#colorLiteral(red: 0.4588235294, green: 0.6431372549, blue: 0.5333333333, alpha: 1))
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
@@ -51,8 +51,10 @@ struct ProductPageOneView: View {
                 ZStack(alignment: .center) {
                     RoundedRectangle(cornerRadius: 40)
                         .fill(Color.white)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .ignoresSafeArea()
                     
-                    VStack(spacing: 10) {
+                    VStack(spacing: 20) {
                         Text("Name of the Product")
                             .font(.title.bold())
                             .foregroundColor(.gray)
@@ -71,6 +73,20 @@ struct ProductPageOneView: View {
                             )
                         
                         SafetyBar(score: score)
+                        
+                        NavigationLink {
+                            DetailReview()
+                        } label: {
+                            Text("Click Here to See Details")
+                                .font(.title3.bold())
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 18)
+                                .background(Color(#colorLiteral(red: 0.9607843137, green: 0.5960784314, blue: 0.2196078431, alpha: 1)))
+                                .cornerRadius(20)
+                                .padding(.horizontal, 40)
+                                .padding(.vertical, 40)
+                        }
                     }
                 }
             }

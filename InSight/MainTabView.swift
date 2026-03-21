@@ -30,7 +30,7 @@ struct MainTabView: View {
                 }
                 .tag(2)
             
-            ListsView()
+            ProductPageOneView()
                 .tabItem {
                     Image(systemName: "doc.text.fill")
                 }
