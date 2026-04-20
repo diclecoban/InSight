@@ -8,109 +8,142 @@
 import SwiftUI
 
 struct LoginView: View {
-    @Binding var isLoggedIn: Bool
+    @Environment(AppStateViewModel.self) private var appState
     @State private var email = ""
     @State private var password = ""
-    
+
+    private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
+    private let accentColor = Color(red: 1.0, green: 0.176, blue: 0.333)
+
     var body: some View {
         ZStack {
-            Color(red: 0.459, green: 0.643, blue: 0.533)
+            backgroundColor
                 .ignoresSafeArea()
-            
-            VStack(spacing: 20) {
+
+            VStack(spacing: 18) {
                 Spacer()
-                
+
                 Text("Log In")
-                    .font(.title.bold())
-                    .foregroundColor(.black)
-                
-                // Email alanı
-                TextField("Email", text: $email)
-                    .padding(16)
-                    .background(Color.white)
-                    .cornerRadius(10)
-                    .keyboardType(.emailAddress)
-                    .autocapitalization(.none)
-                    .padding(.horizontal, 24)
-                
-                // Şifre alanı
-                SecureField("Password", text: $password)
-                    .padding(16)
-                    .background(Color(red: 0.95, green: 0.95, blue: 0.95))
-                    .cornerRadius(10)
-                    .padding(.horizontal, 24)
-                
-                // Şifremi unuttum
-                HStack {
-                    Spacer()
-                    Button("Forgot Your Password?") { }
-                        .font(.subheadline)
-                        .foregroundColor(.blue)
-                        .padding(.trailing, 24)
-                }
-                
-                // Login butonu
-                Button {
-                    isLoggedIn = true
-                } label: {
-                    Text("Login")
-                        .font(.title3.bold())
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 18)
-                        .background(Color(red: 1, green: 0.176, blue: 0.333))
-                        .cornerRadius(30)
-                        .padding(.horizontal, 24)
-                }
-                
-                // Or ayırıcı
-                HStack {
-                    Rectangle()
-                        .frame(height: 0.5)
-                        .foregroundColor(.black.opacity(0.3))
-                    Text("Or")
-                        .font(.subheadline)
-                        .foregroundColor(.black.opacity(0.6))
-                    Rectangle()
-                        .frame(height: 0.5)
-                        .foregroundColor(.black.opacity(0.3))
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .foregroundStyle(.black)
+
+                VStack(spacing: 12) {
+                    AuthField(title: "Email", text: $email)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+
+                    AuthSecureField(title: "Password", text: $password)
                 }
                 .padding(.horizontal, 24)
-                
-                // Sosyal giriş ikonları
-                HStack(spacing: 16) {
-                    ForEach(["envelope", "link", "f.circle"], id: \.self) { icon in
-                        Image(systemName: icon)
-                            .font(.title2)
-                            .foregroundColor(.black)
-                            .frame(width: 56, height: 56)
-                            .background(Color.white)
-                            .cornerRadius(12)
+
+                HStack {
+                    Spacer()
+                    Button("Forgot Your Password?") {
                     }
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.white.opacity(0.88))
                 }
-                
+                .padding(.horizontal, 24)
+
+                Button {
+                    appState.signIn(email: email, password: password)
+                } label: {
+                    Text("Login")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(accentColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                }
+                .padding(.horizontal, 24)
+
+                HStack(spacing: 12) {
+                    Rectangle()
+                        .fill(Color.white.opacity(0.4))
+                        .frame(height: 1)
+
+                    Text("Or")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.white.opacity(0.78))
+
+                    Rectangle()
+                        .fill(Color.white.opacity(0.4))
+                        .frame(height: 1)
+                }
+                .padding(.horizontal, 24)
+
+                HStack(spacing: 14) {
+                    SocialButton(symbol: "envelope.fill")
+                    SocialButton(symbol: "apple.logo")
+                    SocialButton(symbol: "f.cursive")
+                }
+
                 Spacer()
-                
-                // Kayıt ol
+
                 HStack(spacing: 4) {
                     Text("Don't Have Account?")
-                        .foregroundColor(.black.opacity(0.7))
+                        .foregroundStyle(Color.white.opacity(0.82))
+
                     NavigationLink {
-                        PageOneView(isLoggedIn: $isLoggedIn)
+                        PageOneView()
                     } label: {
                         Text("Sign Up")
-                            .foregroundColor(.yellow)
-                            .bold()
-                            .font(.subheadline)
+                            .foregroundStyle(Color(red: 0.988, green: 0.922, blue: 0.353))
+                            .fontWeight(.bold)
                     }
                 }
-                .padding(.bottom, 24)
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .padding(.bottom, 28)
             }
         }
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
+    }
+}
+
+struct AuthField: View {
+    let title: String
+    @Binding var text: String
+
+    var body: some View {
+        TextField(title, text: $text)
+            .font(.system(size: 14, weight: .medium, design: .rounded))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Color.white.opacity(0.95))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+}
+
+struct AuthSecureField: View {
+    let title: String
+    @Binding var text: String
+
+    var body: some View {
+        SecureField(title, text: $text)
+            .font(.system(size: 14, weight: .medium, design: .rounded))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Color.white.opacity(0.95))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+}
+
+private struct SocialButton: View {
+    let symbol: String
+
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: 18, weight: .semibold))
+            .foregroundStyle(.black.opacity(0.78))
+            .frame(width: 36, height: 36)
+            .background(Color.white.opacity(0.95))
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
 
 #Preview {
-    LoginView(isLoggedIn: .constant(false))
+    LoginView()
+        .environment(AppStateViewModel())
 }

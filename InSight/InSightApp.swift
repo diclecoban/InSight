@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct InSightApp: App {
+    @State private var appState = AppStateViewModel()
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(appState)
         }
     }
 }

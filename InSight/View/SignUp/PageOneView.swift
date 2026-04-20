@@ -8,71 +8,77 @@
 import SwiftUI
 
 struct PageOneView: View {
-    @Binding var isLoggedIn: Bool
-    @State var email: String = ""
-    @State var firstName: String = ""
-    @State var lastName: String = ""
-    @State var password = ""
-    @State var confirmPassword: String = ""
-    
+    @Environment(AppStateViewModel.self) private var appState
+    @State private var email: String = ""
+    @State private var firstName: String = ""
+    @State private var lastName: String = ""
+    @State private var password = ""
+    @State private var confirmPassword: String = ""
+
+    private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
+    private let accentColor = Color(red: 1.0, green: 0.176, blue: 0.333)
+
     var body: some View {
-        ZStack(alignment: .center) {
-            Color(#colorLiteral(red: 0.4588235294, green: 0.6431372549, blue: 0.5333333333, alpha: 1))
+        ZStack {
+            backgroundColor
                 .ignoresSafeArea()
-            VStack() {
+
+            VStack(spacing: 12) {
+                Spacer()
+
                 Text("Sign Up")
-                    .font(Font.largeTitle.bold())
-                    .foregroundColor(.black)
-                TextField("Email", text: $email)
-                    .padding(16)
-                    .background(Color.white)
-                    .cornerRadius(10)
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+
+                AuthField(title: "Email", text: $email)
                     .keyboardType(.emailAddress)
-                    .autocapitalization(.none)
-                    .padding(.horizontal, 24)
-                HStack(alignment: .center) {
-                    TextField("First Name", text: $firstName)
-                        .padding(16)
-                        .background(Color.white)
-                        .cornerRadius(10)
-                        .autocapitalization(.none)
-                        .padding(.leading, 24)
-                    TextField("Last Name", text: $lastName)
-                        .padding(16)
-                        .background(Color.white)
-                        .cornerRadius(10)
-                        .autocapitalization(.none)
-                        .padding(.trailing, 24)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+
+                HStack(spacing: 12) {
+                    AuthField(title: "First Name", text: $firstName)
+                    AuthField(title: "Last Name", text: $lastName)
                 }
-                SecureField("Password", text: $password)
-                    .padding(16)
-                    .background(Color(red: 0.95, green: 0.95, blue: 0.95))
-                    .cornerRadius(10)
-                    .padding(.horizontal, 24)
-                SecureField("Confirm Password", text: $confirmPassword)
-                    .padding(16)
-                    .background(Color(red: 0.95, green: 0.95, blue: 0.95))
-                    .cornerRadius(10)
-                    .padding(.horizontal, 24)
-                
+
+                AuthSecureField(title: "Password", text: $password)
+                AuthSecureField(title: "Confirm Password", text: $confirmPassword)
+
                 NavigationLink {
-                    PageTwoView(isLoggedIn: $isLoggedIn)
+                    PageTwoView()
                 } label: {
                     Text("Next")
-                        .font(.title3.bold())
-                        .foregroundColor(.white)
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 18)
-                        .background(Color(red: 1, green: 0.176, blue: 0.333))
-                        .cornerRadius(30)
-                        .padding(.horizontal, 24)
                         .padding(.vertical, 16)
+                        .background(accentColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
+                .padding(.top, 6)
+
+                Spacer()
+
+                HStack(spacing: 4) {
+                    Text("Already Have Account?")
+                        .foregroundStyle(Color.white.opacity(0.82))
+
+                    NavigationLink {
+                        LoginView()
+                    } label: {
+                        Text("Sign In")
+                            .foregroundStyle(Color(red: 0.988, green: 0.922, blue: 0.353))
+                            .fontWeight(.bold)
+                    }
+                }
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .padding(.bottom, 28)
             }
+            .padding(.horizontal, 24)
         }
+        .toolbar(.hidden, for: .navigationBar)
     }
 }
 
 #Preview {
-    PageOneView(isLoggedIn: .constant(false))
+    PageOneView()
+        .environment(AppStateViewModel())
 }

@@ -1,106 +1,101 @@
 import SwiftUI
 
 struct VerificationView: View {
-    @Binding var isLoggedIn: Bool
+    @Environment(AppStateViewModel.self) private var appState
     @State private var otpFields = ["", "", "", "", "", ""]
     @FocusState private var focusedField: Int?
-    
+
+    private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
+    private let accentColor = Color(red: 1.0, green: 0.176, blue: 0.333)
+
     var body: some View {
         ZStack {
-            Color(#colorLiteral(red: 0.4588235294, green: 0.6431372549, blue: 0.5333333333, alpha: 1))
+            backgroundColor
                 .ignoresSafeArea()
-            
+
             VStack(spacing: 24) {
                 Spacer()
-                
+
                 Text("Verification")
-                    .font(.title.bold())
-                    .foregroundColor(.black)
-                
-                Text("We Send You Email Please Check Your Email\nAnd Complete Otp Code")
-                    .font(.subheadline)
-                    .foregroundColor(.black.opacity(0.7))
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+
+                Text("We sent you an email. Please check your inbox and complete the OTP code.")
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.black.opacity(0.7))
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-                
-                // OTP kutucukları
+                    .padding(.horizontal, 32)
+
                 HStack(spacing: 8) {
                     ForEach(0..<6, id: \.self) { index in
-                        // Orta çizgi (3. ve 4. kutu arasında)
                         if index == 3 {
                             Rectangle()
-                                .frame(width: 20, height: 2)
-                                .foregroundColor(.white.opacity(0.7))
+                                .fill(Color.white.opacity(0.7))
+                                .frame(width: 18, height: 2)
                         }
-                        
+
                         TextField("0", text: $otpFields[index])
-                            .frame(width: 48, height: 56)
-                            .background(Color.white.opacity(0.9))
-                            .cornerRadius(10)
+                            .frame(width: 38, height: 46)
+                            .background(Color.white.opacity(0.92))
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                             .multilineTextAlignment(.center)
-                            .font(.title2.bold())
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
                             .keyboardType(.numberPad)
                             .focused($focusedField, equals: index)
-                            .onChange(of: otpFields[index]) { oldValue, newValue in
-                                // Sadece 1 karakter al
+                            .onChange(of: otpFields[index]) { _, newValue in
                                 if newValue.count > 1 {
                                     otpFields[index] = String(newValue.last!)
                                 }
-                                // Sayı girilince bir sonraki kutuya geç
+
                                 if newValue.count == 1 {
-                                    if index < 5 {
-                                        focusedField = index + 1
-                                    } else {
-                                        focusedField = nil // son kutu, klavyeyi kapat
-                                    }
+                                    focusedField = index < 5 ? index + 1 : nil
                                 }
-                                // Silinince bir önceki kutuya geç
+
                                 if newValue.isEmpty && index > 0 {
                                     focusedField = index - 1
                                 }
                             }
                     }
                 }
-                
-                // Confirm butonu
+
                 Button {
-                    isLoggedIn = true
+                    appState.completeVerification()
                 } label: {
                     Text("Confirm")
-                        .font(.title3.bold())
-                        .foregroundColor(.white)
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 18)
-                        .background(Color(red: 1, green: 0.176, blue: 0.333))
-                        .cornerRadius(30)
-                        .padding(.horizontal, 24)
+                        .padding(.vertical, 16)
+                        .background(accentColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
-                
+                .padding(.horizontal, 24)
+
                 Spacer()
-                
-                // Alt yazı
+
                 HStack(spacing: 4) {
                     Text("Already Have Account?")
-                        .foregroundColor(.black.opacity(0.7))
+                        .foregroundStyle(Color.black.opacity(0.7))
+
                     NavigationLink {
-                        LoginView(isLoggedIn: $isLoggedIn)
+                        LoginView()
                     } label: {
                         Text("Sign In")
-                            .foregroundColor(.yellow)
-                            .bold()
+                            .foregroundStyle(Color(red: 0.988, green: 0.922, blue: 0.353))
+                            .fontWeight(.bold)
                     }
                 }
-                .font(.subheadline)
-                .padding(.bottom, 24)
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .padding(.bottom, 28)
             }
         }
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
         .onAppear {
-            focusedField = 0 // sayfa açılınca ilk kutuya odaklan
+            focusedField = 0
         }
     }
 }
 
 #Preview {
-    VerificationView(isLoggedIn: .constant(false))
+    VerificationView()
+        .environment(AppStateViewModel())
 }

@@ -9,78 +9,86 @@ import SwiftUI
 
 struct HomeView: View {
     @State var userName: String = "Susan Clay"
+
+    private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
+    private let accentColor = Color(red: 0.953, green: 0.643, blue: 0.286)
+
     var body: some View {
         ZStack(alignment: .top) {
-            Color(red: 0.459, green: 0.643, blue: 0.533)
+            backgroundColor
                 .ignoresSafeArea()
-            
+
             VStack(spacing: 0) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 5) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(greeting)
-                            .font(.title.bold())
-                            .foregroundColor(.white)
+                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
                         Text(userName)
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.85))
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.82))
                     }
                     Spacer()
                     Image(systemName: "bell.fill")
-                        .foregroundColor(.white)
-                        .font(.title2)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 30, height: 30)
                 }
                 .padding(.horizontal, 24)
-                .padding(.top, 60)
-                .padding(.bottom, 60) // Avatar için boşluk
-                
-                // BEYAZ KART — ana içerik
+                .padding(.top, 16)
+                .padding(.bottom, 56)
+
                 ZStack(alignment: .top) {
-                    RoundedRectangle(cornerRadius: 40)
+                    RoundedRectangle(cornerRadius: 34, style: .continuous)
                         .fill(Color.white)
-                    
+                        .ignoresSafeArea(edges: .bottom)
+
                     VStack(spacing: 20) {
-                        // Avatar — karta taşan kısım
-                        RoundedRectangle(cornerRadius: 24)
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    colors: [.orange, .red],
+                                    colors: [Color(red: 0.996, green: 0.761, blue: 0.471), Color(red: 0.957, green: 0.443, blue: 0.365)],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                             )
                             .frame(width: 90, height: 90)
-                            .offset(y: -45) // Yeşil alana taşıyor
+                            .offset(y: -45)
                             .padding(.bottom, -45)
-                        
-                        // Rozet ikonu
+                            .overlay {
+                                Image(systemName: "person.crop.circle.fill")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 60, height: 60)
+                                    .foregroundStyle(.white)
+                                    .offset(y: -45)
+                            }
+
                         Image(systemName: "medal.fill")
-                            .foregroundColor(.orange)
-                            .font(.title2)
-                        
-                        // Başlık
+                            .foregroundStyle(accentColor)
+                            .font(.system(size: 20, weight: .semibold))
+
                         Group {
                             Text("Welcome to your\ncomfort ")
-                                .font(.title.bold())
-                                .foregroundColor(.black)
-                             Text("place")
-                                .font(.title.bold())
-                                .foregroundColor(Color(red: 0.459, green: 0.643, blue: 0.533))
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                .foregroundStyle(.black)
+                            Text("place")
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                .foregroundStyle(backgroundColor)
                         }
                         .multilineTextAlignment(.center)
-                        
-                        // KATEGORİ KARTLARI
+
                         HStack(spacing: 12) {
                             CategoryCard(icon: "bag.fill", title: "Skin Care")
                             CategoryCard(icon: "heart.fill", title: "Food")
                         }
                         .padding(.horizontal, 24)
                         
-                        // ÖNERİLER
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Recommended for You")
-                                .font(.headline)
+                                .font(.system(size: 16, weight: .bold, design: .rounded))
                                 .padding(.horizontal, 24)
-                            
+
                             RecommendationCard(
                                 title: "Ingredient of the Day",
                                 subtitle: "It is you"
@@ -90,63 +98,61 @@ struct HomeView: View {
                                 subtitle: "Rosaville"
                             )
                         }
-                        
-                        Spacer(minLength: 80) // Tab bar için boşluk
+
+                        Spacer(minLength: 96)
                     }
-                    .padding(.top, 20)
+                    .padding(.top, 24)
                 }
-                .padding(.top, 45) // Avatar overlap için
+                .padding(.top, 22)
             }
         }
     }
 }
 
-// YARDIMCI COMPONENT: Kategori kartı
 struct CategoryCard: View {
     let icon: String
     let title: String
-    
+
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.largeTitle)
+                .font(.system(size: 28))
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [.orange, .red],
+                        colors: [Color(red: 0.996, green: 0.761, blue: 0.471), Color(red: 0.957, green: 0.443, blue: 0.365)],
                         startPoint: .top,
                         endPoint: .bottom
                     )
                 )
             Text(title)
-                .font(.subheadline)
-                .foregroundColor(.black)
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(.black)
         }
         .frame(maxWidth: .infinity)
         .frame(height: 110)
         .background(Color.white)
-        .cornerRadius(20)
-        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 4)
     }
 }
 
-// YARDIMCI COMPONENT: Öneri kartı
 struct RecommendationCard: View {
     let title: String
     let subtitle: String
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.headline)
+                .font(.system(size: 15, weight: .bold, design: .rounded))
             Text(subtitle)
-                .font(.subheadline)
-                .foregroundColor(.gray)
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(.gray)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(Color.white)
-        .cornerRadius(16)
-        .shadow(color: .black.opacity(0.06), radius: 6, x: 0, y: 2)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
         .padding(.horizontal, 24)
     }
 }

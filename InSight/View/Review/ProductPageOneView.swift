@@ -8,130 +8,195 @@
 import SwiftUI
 
 struct ProductPageOneView: View {
-    let score: Double = 0.7
-    @State var userName: String = "Susan Clay"
-    
-    var safetyText: String {
+    private let score: Double = 0.7
+    @State private var userName: String = "Susan Clay"
+
+    private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
+    private let accentColor = Color(red: 0.953, green: 0.643, blue: 0.286)
+
+    private var safetyText: String {
         switch score {
-        case 0.8...1.0: return "Safe!"
-        case 0.5..<0.8: return "Mostly Safe!"
-        default:        return "Avoid!"
+        case 0.8...1.0:
+            return "Safe!"
+        case 0.5..<0.8:
+            return "Mostly Safe!"
+        default:
+            return "Risky!"
         }
     }
-    
-    var safetyColor: Color {
+
+    private var safetyColor: Color {
         switch score {
-        case 0.8...1.0: return .green
-        case 0.5..<0.8: return .orange
-        default:        return .red
+        case 0.8...1.0:
+            return Color(red: 0.255, green: 0.694, blue: 0.427)
+        case 0.5..<0.8:
+            return accentColor
+        default:
+            return Color(red: 0.925, green: 0.302, blue: 0.302)
         }
     }
+
     var body: some View {
-        ZStack(alignment: .top) {
-            Color(#colorLiteral(red: 0.4588235294, green: 0.6431372549, blue: 0.5333333333, alpha: 1))
-                .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text(greeting)
-                            .font(.title.bold())
-                            .foregroundColor(.white)
-                        Text(userName)
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.85))
+        NavigationStack {
+            ZStack(alignment: .top) {
+                backgroundColor
+                    .ignoresSafeArea()
+
+                VStack(spacing: 0) {
+                    header
+
+                    ZStack(alignment: .top) {
+                        RoundedRectangle(cornerRadius: 34, style: .continuous)
+                            .fill(Color.white)
+                            .ignoresSafeArea(edges: .bottom)
+
+                        VStack(spacing: 22) {
+                            ProductHeroCard()
+                                .offset(y: -56)
+                                .padding(.bottom, -30)
+
+                            VStack(spacing: 10) {
+                                Text("This Product is")
+                                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.black)
+
+                                Text(safetyText)
+                                    .font(.system(size: 28, weight: .heavy, design: .rounded))
+                                    .foregroundStyle(safetyColor)
+                            }
+                            .multilineTextAlignment(.center)
+
+                            SafetyBar(score: score, tint: safetyColor)
+
+                            NavigationLink {
+                                DetailReview()
+                            } label: {
+                                Text("Click here to see details")
+                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 16)
+                                    .background(accentColor)
+                                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            }
+                            .padding(.horizontal, 24)
+
+                            Spacer(minLength: 120)
+                        }
+                        .padding(.top, 36)
                     }
-                    Spacer()
-                    Image(systemName: "bell.fill")
-                        .foregroundColor(.white)
-                        .font(.title2)
+                    .padding(.top, 52)
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 60) // Avatar için boşluk
-                ZStack(alignment: .center) {
-                    RoundedRectangle(cornerRadius: 40)
-                        .fill(Color.white)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .ignoresSafeArea()
-                    
-                    VStack(spacing: 20) {
-                        Text("Name of the Product")
-                            .font(.title.bold())
-                            .foregroundColor(.gray)
-                        Text("$19.99")
-                            .font(.title2.bold())
-                            .foregroundColor(.black)
-                            .padding(.bottom, 30)
-                        
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(Color.gray.opacity(0.2))
-                            .frame(width: 200, height: 200)
-                            .overlay(
-                                Image(systemName: "photo")
-                                    .font(.largeTitle)
-                                    .foregroundColor(.gray)
+            }
+            .toolbar(.hidden, for: .navigationBar)
+        }
+    }
+
+    private var header: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(greeting)
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+
+                Text(userName)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.82))
+            }
+
+            Spacer()
+
+            Image(systemName: "bell.fill")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 30, height: 30)
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 16)
+        .padding(.bottom, 62)
+    }
+}
+
+private struct ProductHeroCard: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(Color.white)
+                .frame(width: 150, height: 150)
+                .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 12)
+
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.964, green: 0.973, blue: 0.992),
+                            Color(red: 0.905, green: 0.929, blue: 0.976)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 132, height: 132)
+                .overlay {
+                    VStack(spacing: 10) {
+                        Image(systemName: "person.crop.circle.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 74, height: 74)
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [
+                                        Color(red: 0.345, green: 0.345, blue: 0.345),
+                                        Color(red: 0.176, green: 0.176, blue: 0.176)
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
                             )
-                        
-                        SafetyBar(score: score)
-                        
-                        NavigationLink {
-                            DetailReview()
-                        } label: {
-                            Text("Click Here to See Details")
-                                .font(.title3.bold())
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 18)
-                                .background(Color(#colorLiteral(red: 0.9607843137, green: 0.5960784314, blue: 0.2196078431, alpha: 1)))
-                                .cornerRadius(20)
-                                .padding(.horizontal, 40)
-                                .padding(.vertical, 40)
+
+                        HStack(spacing: 4) {
+                            ForEach(0..<4, id: \.self) { _ in
+                                Circle()
+                                    .fill(Color.white.opacity(0.7))
+                                    .frame(width: 4, height: 4)
+                            }
                         }
                     }
                 }
-            }
         }
     }
 }
 
-struct SafetyBar: View {
-    let score: Double // 0.0 ile 1.0 arası (0.7 = %70)
-    
-    var barColor: Color {
-        switch score {
-        case 0.8...1.0: return .green
-        case 0.5..<0.8: return .orange
-        default:        return .red
-        }
-    }
-    
+private struct SafetyBar: View {
+    let score: Double
+    let tint: Color
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(spacing: 10) {
             HStack {
                 Text("Safety Score")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.black.opacity(0.55))
+
                 Spacer()
+
                 Text("\(Int(score * 100))%")
-                    .font(.subheadline.bold())
-                    .foregroundColor(barColor)
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(tint)
             }
-            .padding(.horizontal, 24)
-            
-            // Arka plan (gri bar)
+
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.gray.opacity(0.2))
-                        .frame(height: 12)
-                    // Dolu kısım (renkli bar)
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(barColor)
-                        .frame(width: geometry.size.width * score, height: 12)
+                    Capsule()
+                        .fill(Color.black.opacity(0.08))
+                        .frame(height: 10)
+
+                    Capsule()
+                        .fill(tint)
+                        .frame(width: geometry.size.width * score, height: 10)
                 }
             }
-            .frame(height: 12)
-            .padding(.horizontal, 24)
+            .frame(height: 10)
         }
         .padding(.horizontal, 24)
     }

@@ -8,18 +8,18 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var isLoggedIn = false
+    @Environment(AppStateViewModel.self) private var appState
+
     var body: some View {
-        if isLoggedIn {
+        if appState.isLoggedIn {
             MainTabView()
         } else {
-            NavigationStack {
-                WelcomeView(isLoggedIn: $isLoggedIn)
-            }
+            WelcomeView()
         }
     }
 }
 
 #Preview {
     ContentView()
+        .environment(AppStateViewModel())
 }
