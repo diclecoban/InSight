@@ -1,28 +1,36 @@
-//
-//  AppStateViewModel.swift
-//  InSight
-//
-//  Created by Codex on 20.04.2026.
-//
-
 import Foundation
 import Observation
 
 @Observable
 final class AppStateViewModel {
+    private let authService: AuthServicing
+    private let profileService: ProfileServicing
+    private let contentService: ContentServicing
+    private let scanService: ScanServicing
+
     var session: AuthSession?
     var userProfile: UserProfile?
     var savedReviews: [SavedReview]
     var recommendations: [RecommendationItem]
     var latestScanResult: ScanResult?
+    var isLoading = false
+    var errorMessage: String?
 
     init(
+        authService: AuthServicing = MockAuthService(),
+        profileService: ProfileServicing = MockProfileService(),
+        contentService: ContentServicing = MockContentService(),
+        scanService: ScanServicing = MockScanService(),
         session: AuthSession? = nil,
-        userProfile: UserProfile? = AppStateViewModel.mockProfile,
-        savedReviews: [SavedReview] = AppStateViewModel.mockSavedReviews,
-        recommendations: [RecommendationItem] = AppStateViewModel.mockRecommendations,
-        latestScanResult: ScanResult? = AppStateViewModel.mockScanResult
+        userProfile: UserProfile? = AppMockData.profile,
+        savedReviews: [SavedReview] = AppMockData.savedReviews,
+        recommendations: [RecommendationItem] = AppMockData.recommendations,
+        latestScanResult: ScanResult? = AppMockData.sampleScanResult
     ) {
+        self.authService = authService
+        self.profileService = profileService
+        self.contentService = contentService
+        self.scanService = scanService
         self.session = session
         self.userProfile = userProfile
         self.savedReviews = savedReviews
@@ -42,80 +50,53 @@ final class AppStateViewModel {
         userProfile?.firstName ?? "Guest"
     }
 
-    func signIn(email: String, password: String) {
-        let normalizedEmail = email.isEmpty ? Self.mockProfile.email : email
-        session = AuthSession(
-            userID: Self.mockProfile.id,
-            email: normalizedEmail,
-            authToken: "mock-auth-token",
-            refreshToken: "mock-refresh-token"
-        )
+    func signIn(email: String, password: String) async {
+        await performRequest {
+            let newSession = try await authService.signIn(email: email, password: password)
+            session = newSession
+            try await loadAuthenticatedContent(for: newSession.userID)
+        }
     }
 
-    func completeVerification() {
-        session = AuthSession(
-            userID: Self.mockProfile.id,
-            email: Self.mockProfile.email,
-            authToken: "mock-auth-token",
-            refreshToken: "mock-refresh-token"
-        )
+    func completeVerification(code: String) async {
+        await performRequest {
+            let newSession = try await authService.verifyOTP(code: code)
+            session = newSession
+            try await loadAuthenticatedContent(for: newSession.userID)
+        }
+    }
+
+    func analyzeBarcode(_ barcode: String) async {
+        await performRequest {
+            latestScanResult = try await scanService.analyzeBarcode(barcode, for: session?.userID)
+        }
     }
 
     func signOut() {
         session = nil
+        errorMessage = nil
     }
-}
 
-extension AppStateViewModel {
-    static let mockProfile = UserProfile(
-        id: UUID(),
-        firstName: "Susan",
-        lastName: "Clay",
-        email: "susan@insight.app",
-        age: 19,
-        skinType: "Dry",
-        condition: "Sensitive Skin",
-        sensitivity: "High",
-        allergies: ["Fragrance"]
-    )
+    private func loadAuthenticatedContent(for userID: UUID) async throws {
+        async let profile = profileService.fetchUserProfile(userID: userID)
+        async let reviews = contentService.fetchSavedReviews(for: userID)
+        async let recommendations = contentService.fetchRecommendations(for: userID)
 
-    static let mockRecommendations = [
-        RecommendationItem(id: UUID(), title: "Ingredient of the Day", subtitle: "It is you"),
-        RecommendationItem(id: UUID(), title: "Why Avoid Palm Oil?", subtitle: "Rosaville")
-    ]
+        userProfile = try await profile
+        savedReviews = try await reviews
+        self.recommendations = try await recommendations
+    }
 
-    static let mockSavedReviews = [
-        SavedReview(id: UUID(), productName: "Hydrating Cleanser", status: .mostlySafe, savedAt: .now),
-        SavedReview(id: UUID(), productName: "Vitamin C Serum", status: .safe, savedAt: .now),
-        SavedReview(id: UUID(), productName: "Fragrance Mist", status: .risky, savedAt: .now)
-    ]
+    private func performRequest(_ operation: () async throws -> Void) async {
+        isLoading = true
+        errorMessage = nil
 
-    static let mockScanResult = ScanResult(
-        id: UUID(),
-        product: Product(
-            id: UUID(),
-            name: "CERAVE Cleanser",
-            brand: "CeraVe",
-            priceText: "$19.99",
-            barcode: "8691234567890"
-        ),
-        score: 0.7,
-        safetyLevel: .mostlySafe,
-        summary: "The product is 70% safe.",
-        ingredients: [
-            IngredientInsight(
-                id: UUID(),
-                name: "Glycerin",
-                detail: "A humectant that supports hydration.",
-                riskNote: "Low risk for most skin types."
-            ),
-            IngredientInsight(
-                id: UUID(),
-                name: "Fragrance",
-                detail: "Used to adjust the scent profile.",
-                riskNote: "Can trigger irritation in sensitive skin."
-            )
-        ],
-        scannedAt: .now
-    )
+        do {
+            try await operation()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        isLoading = false
+    }
 }

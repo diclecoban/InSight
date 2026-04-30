@@ -1,10 +1,3 @@
-//
-//  BarcodeScanner.swift
-//  InSight
-//
-//  Created by Dicle Sara Çoban on 20.03.2026.
-//
-
 import AVFoundation
 import SwiftUI
 

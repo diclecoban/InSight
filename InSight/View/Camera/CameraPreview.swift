@@ -1,10 +1,5 @@
 //
 //  CameraPreview.swift
-//  InSight
-//
-//  Created by Dicle Sara Çoban on 20.03.2026.
-//
-
 import SwiftUI
 import AVFoundation
 

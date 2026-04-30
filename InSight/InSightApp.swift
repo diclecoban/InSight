@@ -11,6 +11,23 @@ import SwiftUI
 struct InSightApp: App {
     @State private var appState = AppStateViewModel()
 
+    init() {
+        let authService: AuthServicing
+
+        if NetworkConfiguration.useMockAuth {
+            authService = MockAuthService()
+        } else {
+            let client = APIClient(baseURL: NetworkConfiguration.baseURL)
+            authService = APIAuthService(client: client)
+        }
+
+        _appState = State(
+            initialValue: AppStateViewModel(
+                authService: authService
+            )
+        )
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()

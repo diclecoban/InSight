@@ -1,14 +1,8 @@
-//
-//  ScanView.swift
-//  InSight
-//
-//  Created by Dicle Sara Çoban on 20.03.2026.
-//
-
 import SwiftUI
 import AVFoundation
 
 struct ScanView: View {
+    @Environment(AppStateViewModel.self) private var appState
     @State private var scanner = BarcodeScanner()
     @State private var scannedCode: String = ""
     @State private var showResult = false
@@ -125,6 +119,9 @@ struct ScanView: View {
             if let code = newValue {
                 scannedCode = code
                 showResult = true
+                Task {
+                    await appState.analyzeBarcode(code)
+                }
             }
         }
     }
@@ -143,4 +140,5 @@ private struct ActionIcon: View {
 
 #Preview {
     ScanView()
+        .environment(AppStateViewModel())
 }

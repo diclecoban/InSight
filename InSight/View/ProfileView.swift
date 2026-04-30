@@ -14,7 +14,7 @@ struct ProfileView: View {
     private let accentColor = Color(red: 0.953, green: 0.643, blue: 0.286)
 
     private var profile: UserProfile {
-        appState.userProfile ?? AppStateViewModel.mockProfile
+        appState.userProfile ?? AppMockData.profile
     }
 
     var body: some View {

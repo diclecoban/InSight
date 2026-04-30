@@ -47,7 +47,9 @@ struct LoginView: View {
                 .padding(.horizontal, 24)
 
                 Button {
-                    appState.signIn(email: email, password: password)
+                    Task {
+                        await appState.signIn(email: email, password: password)
+                    }
                 } label: {
                     Text("Login")
                         .font(.system(size: 16, weight: .bold, design: .rounded))
@@ -58,6 +60,14 @@ struct LoginView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
                 .padding(.horizontal, 24)
+                .disabled(appState.isLoading)
+
+                if let errorMessage = appState.errorMessage {
+                    Text(errorMessage)
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 24)
+                }
 
                 HStack(spacing: 12) {
                     Rectangle()
@@ -81,6 +91,11 @@ struct LoginView: View {
                 }
 
                 Spacer()
+
+                if appState.isLoading {
+                    ProgressView()
+                        .tint(.white)
+                }
 
                 HStack(spacing: 4) {
                     Text("Don't Have Account?")

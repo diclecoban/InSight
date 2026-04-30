@@ -58,7 +58,10 @@ struct VerificationView: View {
                 }
 
                 Button {
-                    appState.completeVerification()
+                    let code = otpFields.joined()
+                    Task {
+                        await appState.completeVerification(code: code)
+                    }
                 } label: {
                     Text("Confirm")
                         .font(.system(size: 16, weight: .bold, design: .rounded))
@@ -69,8 +72,21 @@ struct VerificationView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
                 .padding(.horizontal, 24)
+                .disabled(appState.isLoading)
+
+                if let errorMessage = appState.errorMessage {
+                    Text(errorMessage)
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 24)
+                }
 
                 Spacer()
+
+                if appState.isLoading {
+                    ProgressView()
+                        .tint(.white)
+                }
 
                 HStack(spacing: 4) {
                     Text("Already Have Account?")
