@@ -96,3 +96,12 @@ struct RecommendationItem: Identifiable, Equatable {
     var title: String
     var subtitle: String
 }
+
+struct RegistrationDraft: Equatable {
+    var email = ""
+    var firstName = ""
+    var lastName = ""
+    var password = ""
+    var skinType = ""
+    var allergies = ""
+}

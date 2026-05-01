@@ -1,10 +1,3 @@
-//
-//  APIAuthService.swift
-//  InSight
-//
-//  Created by Codex on 20.04.2026.
-//
-
 import Foundation
 
 struct APIAuthService: AuthServicing {
@@ -12,6 +5,18 @@ struct APIAuthService: AuthServicing {
 
     init(client: APIClient) {
         self.client = client
+    }
+
+    func register(draft: RegistrationDraft) async throws {
+        let requestBody = try client.encodeBody(RegisterRequest(draft: draft))
+        let endpoint = APIEndpoint(
+            path: "/auth/register",
+            method: .post,
+            headers: ["Content-Type": "application/json"],
+            body: requestBody
+        )
+
+        try await client.request(endpoint)
     }
 
     func signIn(email: String, password: String) async throws -> AuthSession {
@@ -38,6 +43,27 @@ struct APIAuthService: AuthServicing {
 
         let response: AuthResponse = try await client.request(endpoint)
         return response.toDomain()
+    }
+}
+
+private struct RegisterRequest: Encodable {
+    let email: String
+    let firstName: String
+    let lastName: String
+    let password: String
+    let skinType: String
+    let allergies: [String]
+
+    init(draft: RegistrationDraft) {
+        email = draft.email
+        firstName = draft.firstName
+        lastName = draft.lastName
+        password = draft.password
+        skinType = draft.skinType
+        allergies = draft.allergies
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
     }
 }
 

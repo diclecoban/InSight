@@ -11,6 +11,7 @@ struct PageTwoView: View {
     @Environment(AppStateViewModel.self) private var appState
     @State private var skinType: String = ""
     @State private var allergies: String = ""
+    @State private var navigateToVerification = false
 
     private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
     private let accentColor = Color(red: 1.0, green: 0.176, blue: 0.333)
@@ -29,10 +30,23 @@ struct PageTwoView: View {
                 AuthField(title: "Skin Type", text: $skinType)
                 AuthField(title: "Allergies", text: $allergies)
 
-                NavigationLink {
-                    VerificationView()
+                Button {
+                    appState.updateRegistrationDraft(
+                        RegistrationDraft(
+                            email: appState.registrationDraft.email,
+                            firstName: appState.registrationDraft.firstName,
+                            lastName: appState.registrationDraft.lastName,
+                            password: appState.registrationDraft.password,
+                            skinType: skinType,
+                            allergies: allergies
+                        )
+                    )
+
+                    Task {
+                        await appState.register()
+                    }
                 } label: {
-                    Text("Next")
+                    Text(appState.isLoading ? "Registering..." : "Register")
                         .font(.system(size: 16, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -41,8 +55,21 @@ struct PageTwoView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
                 .padding(.top, 8)
+                .disabled(appState.isLoading || skinType.isEmpty)
+
+                if let errorMessage = appState.errorMessage {
+                    Text(errorMessage)
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                }
 
                 Spacer()
+
+                if appState.isLoading {
+                    ProgressView()
+                        .tint(.white)
+                }
 
                 HStack(spacing: 4) {
                     Text("Already Have Account?")
@@ -62,6 +89,20 @@ struct PageTwoView: View {
             .padding(.horizontal, 24)
         }
         .toolbar(.hidden, for: .navigationBar)
+        .onAppear {
+            let draft = appState.registrationDraft
+            skinType = draft.skinType
+            allergies = draft.allergies
+            appState.resetRegistrationFlow()
+        }
+        .onChange(of: appState.didCompleteRegistration) { _, newValue in
+            if newValue {
+                navigateToVerification = true
+            }
+        }
+        .navigationDestination(isPresented: $navigateToVerification) {
+            VerificationView()
+        }
     }
 }
 

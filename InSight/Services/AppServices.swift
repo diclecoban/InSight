@@ -3,6 +3,7 @@
 import Foundation
 
 protocol AuthServicing {
+    func register(draft: RegistrationDraft) async throws
     func signIn(email: String, password: String) async throws -> AuthSession
     func verifyOTP(code: String) async throws -> AuthSession
 }
@@ -21,6 +22,7 @@ protocol ScanServicing {
 }
 
 enum AppServiceError: LocalizedError {
+    case invalidRegistration
     case invalidCredentials
     case invalidOTP
     case missingSession
@@ -28,6 +30,8 @@ enum AppServiceError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
+        case .invalidRegistration:
+            return "Kayit bilgileri eksik veya gecersiz."
         case .invalidCredentials:
             return "Email veya password hatali."
         case .invalidOTP:
@@ -95,6 +99,19 @@ enum AppMockData {
 }
 
 struct MockAuthService: AuthServicing {
+    func register(draft: RegistrationDraft) async throws {
+        try await Task.sleep(for: .milliseconds(600))
+
+        guard
+            !draft.email.isEmpty,
+            !draft.firstName.isEmpty,
+            !draft.lastName.isEmpty,
+            !draft.password.isEmpty
+        else {
+            throw AppServiceError.invalidRegistration
+        }
+    }
+
     func signIn(email: String, password: String) async throws -> AuthSession {
         try await Task.sleep(for: .milliseconds(500))
 

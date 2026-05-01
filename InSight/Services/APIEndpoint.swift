@@ -1,10 +1,3 @@
-//
-//  APIEndpoint.swift
-//  InSight
-//
-//  Created by Codex on 20.04.2026.
-//
-
 import Foundation
 
 enum HTTPMethod: String {

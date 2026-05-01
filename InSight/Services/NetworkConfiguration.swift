@@ -8,8 +8,7 @@
 import Foundation
 
 enum NetworkConfiguration {
-    static let useMockAuth = true
+    static let useMockAuth = false
 
-    // Replace this with your real backend base URL when the API is ready.
-    static let baseURL = URL(string: "https://api.example.com")!
+    static let baseURL = URL(string: "http://192.168.1.135:3000")!
 }

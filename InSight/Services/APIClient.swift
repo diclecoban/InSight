@@ -1,10 +1,3 @@
-//
-//  APIClient.swift
-//  InSight
-//
-//  Created by Codex on 20.04.2026.
-//
-
 import Foundation
 
 enum APIClientError: LocalizedError {
@@ -46,6 +39,22 @@ struct APIClient {
         let request = try makeURLRequest(for: endpoint)
         let (data, response) = try await session.data(for: request)
 
+        try validate(response: response, data: data)
+        return try decoder.decode(Response.self, from: data)
+    }
+
+    func request(_ endpoint: APIEndpoint) async throws {
+        let request = try makeURLRequest(for: endpoint)
+        let (data, response) = try await session.data(for: request)
+
+        try validate(response: response, data: data)
+    }
+
+    func encodeBody<Body: Encodable>(_ body: Body) throws -> Data {
+        try encoder.encode(body)
+    }
+
+    private func validate(response: URLResponse, data: Data) throws {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIClientError.invalidResponse
         }
@@ -54,12 +63,6 @@ struct APIClient {
             let message = String(data: data, encoding: .utf8) ?? "Unknown server error"
             throw APIClientError.requestFailed(statusCode: httpResponse.statusCode, message: message)
         }
-
-        return try decoder.decode(Response.self, from: data)
-    }
-
-    func encodeBody<Body: Encodable>(_ body: Body) throws -> Data {
-        try encoder.encode(body)
     }
 
     private func makeURLRequest(for endpoint: APIEndpoint) throws -> URLRequest {

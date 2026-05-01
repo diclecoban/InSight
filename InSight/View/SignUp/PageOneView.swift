@@ -54,6 +54,32 @@ struct PageOneView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
                 .padding(.top, 6)
+                .simultaneousGesture(TapGesture().onEnded {
+                    guard isFormValid else {
+                        appState.errorMessage = "Lutfen tum alanlari doldur ve sifreleri eslestir."
+                        return
+                    }
+
+                    appState.updateRegistrationDraft(
+                        RegistrationDraft(
+                            email: email,
+                            firstName: firstName,
+                            lastName: lastName,
+                            password: password,
+                            skinType: appState.registrationDraft.skinType,
+                            allergies: appState.registrationDraft.allergies
+                        )
+                    )
+                    appState.errorMessage = nil
+                })
+                .disabled(!isFormValid)
+
+                if let errorMessage = appState.errorMessage {
+                    Text(errorMessage)
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                }
 
                 Spacer()
 
@@ -75,6 +101,22 @@ struct PageOneView: View {
             .padding(.horizontal, 24)
         }
         .toolbar(.hidden, for: .navigationBar)
+        .onAppear {
+            let draft = appState.registrationDraft
+            email = draft.email
+            firstName = draft.firstName
+            lastName = draft.lastName
+            password = draft.password
+            confirmPassword = draft.password
+        }
+    }
+
+    private var isFormValid: Bool {
+        !email.isEmpty &&
+        !firstName.isEmpty &&
+        !lastName.isEmpty &&
+        !password.isEmpty &&
+        password == confirmPassword
     }
 }
 

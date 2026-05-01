@@ -10,9 +10,22 @@
 		81941EA72F67306500EA7299 /* InSight.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = InSight.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		8165024C2FA38DB8001B6AE5 /* Exceptions for "InSight" folder in "InSight" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 81941EA62F67306500EA7299 /* InSight */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		81941EA92F67306500EA7299 /* InSight */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				8165024C2FA38DB8001B6AE5 /* Exceptions for "InSight" folder in "InSight" target */,
+			);
 			path = InSight;
 			sourceTree = "<group>";
 		};
@@ -253,6 +266,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = InSight/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app uses the camera to scan barcodes and analyze product ingredients.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -285,6 +299,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = InSight/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app uses the camera to scan barcodes and analyze product ingredients.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

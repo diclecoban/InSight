@@ -13,6 +13,8 @@ final class AppStateViewModel {
     var savedReviews: [SavedReview]
     var recommendations: [RecommendationItem]
     var latestScanResult: ScanResult?
+    var registrationDraft = RegistrationDraft()
+    var didCompleteRegistration = false
     var isLoading = false
     var errorMessage: String?
 
@@ -50,6 +52,17 @@ final class AppStateViewModel {
         userProfile?.firstName ?? "Guest"
     }
 
+    func updateRegistrationDraft(_ draft: RegistrationDraft) {
+        registrationDraft = draft
+    }
+
+    func register() async {
+        await performRequest {
+            try await authService.register(draft: registrationDraft)
+            didCompleteRegistration = true
+        }
+    }
+
     func signIn(email: String, password: String) async {
         await performRequest {
             let newSession = try await authService.signIn(email: email, password: password)
@@ -74,6 +87,11 @@ final class AppStateViewModel {
 
     func signOut() {
         session = nil
+        errorMessage = nil
+    }
+
+    func resetRegistrationFlow() {
+        didCompleteRegistration = false
         errorMessage = nil
     }
 
