@@ -32,8 +32,8 @@ struct APIAuthService: AuthServicing {
         return response.toDomain()
     }
 
-    func verifyOTP(code: String) async throws -> AuthSession {
-        let requestBody = try client.encodeBody(OTPVerificationRequest(code: code))
+    func verifyOTP(email: String, code: String) async throws -> AuthSession {
+        let requestBody = try client.encodeBody(OTPVerificationRequest(email: email, code: code))
         let endpoint = APIEndpoint(
             path: "/auth/verify-otp",
             method: .post,
@@ -51,6 +51,8 @@ private struct RegisterRequest: Encodable {
     let firstName: String
     let lastName: String
     let password: String
+    let birthDate: String
+    let gender: String
     let skinType: String
     let allergies: [String]
 
@@ -59,6 +61,8 @@ private struct RegisterRequest: Encodable {
         firstName = draft.firstName
         lastName = draft.lastName
         password = draft.password
+        birthDate = draft.birthDate.formattedForAPI
+        gender = draft.gender
         skinType = draft.skinType
         allergies = draft.allergies
             .split(separator: ",")
@@ -73,6 +77,7 @@ private struct LoginRequest: Encodable {
 }
 
 private struct OTPVerificationRequest: Encodable {
+    let email: String
     let code: String
 }
 
@@ -89,5 +94,15 @@ private struct AuthResponse: Decodable {
             authToken: authToken,
             refreshToken: refreshToken
         )
+    }
+}
+
+private extension Date {
+    var formattedForAPI: String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: self)
     }
 }

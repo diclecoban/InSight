@@ -5,7 +5,7 @@ import Foundation
 protocol AuthServicing {
     func register(draft: RegistrationDraft) async throws
     func signIn(email: String, password: String) async throws -> AuthSession
-    func verifyOTP(code: String) async throws -> AuthSession
+    func verifyOTP(email: String, code: String) async throws -> AuthSession
 }
 
 protocol ProfileServicing {
@@ -106,7 +106,9 @@ struct MockAuthService: AuthServicing {
             !draft.email.isEmpty,
             !draft.firstName.isEmpty,
             !draft.lastName.isEmpty,
-            !draft.password.isEmpty
+            !draft.password.isEmpty,
+            !draft.gender.isEmpty,
+            !draft.skinType.isEmpty
         else {
             throw AppServiceError.invalidRegistration
         }
@@ -127,10 +129,10 @@ struct MockAuthService: AuthServicing {
         )
     }
 
-    func verifyOTP(code: String) async throws -> AuthSession {
+    func verifyOTP(email: String, code: String) async throws -> AuthSession {
         try await Task.sleep(for: .milliseconds(400))
 
-        guard code.count == 6 else {
+        guard !email.isEmpty, code.count == 6 else {
             throw AppServiceError.invalidOTP
         }
 

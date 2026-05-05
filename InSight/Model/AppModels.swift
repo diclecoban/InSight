@@ -102,6 +102,8 @@ struct RegistrationDraft: Equatable {
     var firstName = ""
     var lastName = ""
     var password = ""
+    var birthDate = Date()
+    var gender = ""
     var skinType = ""
     var allergies = ""
 }

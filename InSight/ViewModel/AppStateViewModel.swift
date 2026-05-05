@@ -73,7 +73,10 @@ final class AppStateViewModel {
 
     func completeVerification(code: String) async {
         await performRequest {
-            let newSession = try await authService.verifyOTP(code: code)
+            let newSession = try await authService.verifyOTP(
+                email: registrationDraft.email,
+                code: code
+            )
             session = newSession
             try await loadAuthenticatedContent(for: newSession.userID)
         }

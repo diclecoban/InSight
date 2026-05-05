@@ -1,5 +1,20 @@
 const pool = require('../config/db');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
+
+const createToken = () => crypto.randomBytes(32).toString('hex');
+const normalizeEmail = (email) => (
+    typeof email === 'string' ? email.trim().toLowerCase() : ''
+);
+const normalizeVerificationCode = (code) => String(code ?? '').trim();
+
+const buildAuthResponse = (user, message) => ({
+    userID: user.id,
+    email: user.email,
+    authToken: createToken(),
+    refreshToken: createToken(),
+    message
+});
 
 // 🎀 --- USER REGISTRATION --- 🎀 //
 
@@ -12,21 +27,26 @@ exports.register = async (req, res) => {
             password, 
             firstName, 
             lastName, 
-            age, 
+            birthDate,
+            gender,
             skinType, 
-            condition, 
-            sensitivity, 
             allergies
         } = req.body;
+        const normalizedEmail = normalizeEmail(email);
 
-        if (!email || !password || !firstName || !lastName) {
+        if (!normalizedEmail || !password || !firstName || !lastName || !birthDate || !gender || !skinType) {
             return res.status(400).json({ 
-                error: "Missing required fields: email, password, firstName, and lastName are mandatory." 
+                error: "Missing required fields: email, password, firstName, lastName, birthDate, gender, and skinType are mandatory." 
             });
         }
         if (password.length < 6) {
             return res.status(400).json({ 
                 error: "Password is too short. Minimum 6 characters required." 
+            });
+        }
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
+            return res.status(400).json({
+                error: "birthDate must be in yyyy-MM-dd format."
             });
         }
 
@@ -45,7 +65,7 @@ exports.register = async (req, res) => {
             RETURNING id
         `;
         const userResult = await client.query(userInsertQuery, [
-            email, 
+            normalizedEmail, 
             passwordHash, 
             verificationCode, 
             codeExpiresAt
@@ -54,17 +74,16 @@ exports.register = async (req, res) => {
         const userId = userResult.rows[0].id;
 
         const profileInsertQuery = `
-            INSERT INTO profiles ("userID", "firstName", "lastName", age, "skinType", condition, sensitivity, allergies) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            INSERT INTO profiles ("userID", "firstName", "lastName", "birthDate", gender, "skinType", allergies) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
         `;
         await client.query(profileInsertQuery, [
             userId, 
             firstName, 
             lastName, 
-            age, 
+            birthDate,
+            gender,
             skinType, 
-            condition, 
-            sensitivity, 
             allergiesArray
         ]);
 
@@ -72,17 +91,14 @@ exports.register = async (req, res) => {
 
         console.log(`--------------------------------------------------`);
         console.log(`✅ NEW USER REGISTERED`);
-        console.log(`📧 Email: ${email}`);
+        console.log(`📧 Email: ${normalizedEmail}`);
         console.log(`🔑 OTP: ${verificationCode}`);
         console.log(`--------------------------------------------------`);
 
-        return res.status(201).json({
-            userID: userId,
-            email: email,
-            authToken: "temporary_access_token_will_be_jwt_later", // İleride buraya gerçek JWT gelecek
-            refreshToken: "temporary_refresh_token_will_be_jwt_later",
-            message: "Registration successful. Please verify your email."
-        });
+        return res.status(201).json(buildAuthResponse(
+            { id: userId, email: normalizedEmail },
+            "Registration successful. Please verify your email."
+        ));
 
     } catch (error) {
         await client.query('ROLLBACK');
@@ -104,14 +120,15 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;
+        const normalizedEmail = normalizeEmail(email);
 
-        if (!email || !password) {
+        if (!normalizedEmail || !password) {
             return res.status(400).json({ error: "Email and password are required." });
         }
 
         const userResult = await pool.query(
-            'SELECT id, email, password_hash FROM users WHERE email = $1', 
-            [email]
+            'SELECT id, email, password_hash, is_verified FROM users WHERE email = $1', 
+            [normalizedEmail]
         );
         if (userResult.rows.length === 0) {
             return res.status(401).json({ error: "Email or password is incorrect." });
@@ -126,14 +143,11 @@ exports.login = async (req, res) => {
             return res.status(401).json({ error: "Email or password is incorrect." });
         }
 
-        // İleride buraya JWT (Token) eklenecek
-        res.status(200).json({
-            message: "Login successful!",
-            user: {
-                id: user.id,
-                email: user.email
-            }
-        });
+        if (!user.is_verified) {
+            return res.status(403).json({ error: "Please verify your email before logging in." });
+        }
+
+        return res.status(200).json(buildAuthResponse(user, "Login successful!"));
 
     } catch (err) {
         console.error("Login Error:", err);
@@ -146,10 +160,16 @@ exports.login = async (req, res) => {
 exports.verifyOTP = async (req, res) => {
     try {
         const { email, code } = req.body;
+        const normalizedEmail = normalizeEmail(email);
+        const verificationCode = normalizeVerificationCode(code);
+
+        if (!normalizedEmail || !verificationCode) {
+            return res.status(400).json({ error: "Email and verification code are required." });
+        }
 
         const userResult = await pool.query(
-            'SELECT verification_code, code_expires_at FROM users WHERE email = $1',
-            [email]
+            'SELECT id, email, verification_code, code_expires_at FROM users WHERE email = $1',
+            [normalizedEmail]
         );
 
         if (userResult.rows.length === 0) {
@@ -158,20 +178,20 @@ exports.verifyOTP = async (req, res) => {
 
         const user = userResult.rows[0];
 
-        if (user.verification_code !== code) {
+        if (user.verification_code !== verificationCode) {
             return res.status(400).json({ error: "Invalid verification code." });
         }
-        if (new Date() > user.code_expires_at) {
+        if (!user.code_expires_at || new Date() > user.code_expires_at) {
             return res.status(400).json({ error: "Verification code has expired." });
         }
 
         
         await pool.query(
             'UPDATE users SET is_verified = TRUE, verification_code = NULL, code_expires_at = NULL WHERE email = $1',
-            [email]
+            [normalizedEmail]
         );
 
-        res.status(200).json({ message: "Email verified successfully!" });
+        res.status(200).json(buildAuthResponse(user, "Email verified successfully!"));
 
     } catch (err) {
         console.error("OTP Error:", err);
