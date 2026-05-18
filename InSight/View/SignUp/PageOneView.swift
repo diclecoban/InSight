@@ -56,7 +56,7 @@ struct PageOneView: View {
                 .padding(.top, 6)
                 .simultaneousGesture(TapGesture().onEnded {
                     guard isFormValid else {
-                        appState.errorMessage = "Lutfen tum alanlari doldur ve sifreleri eslestir."
+                        appState.errorMessage = "Please fill in all fields and make sure the passwords match."
                         return
                     }
 

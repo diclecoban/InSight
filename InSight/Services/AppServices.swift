@@ -6,15 +6,19 @@ protocol AuthServicing {
     func register(draft: RegistrationDraft) async throws
     func signIn(email: String, password: String) async throws -> AuthSession
     func verifyOTP(email: String, code: String) async throws -> AuthSession
+    func logout(session: AuthSession) async throws
 }
 
 protocol ProfileServicing {
     func fetchUserProfile(userID: UUID) async throws -> UserProfile
+    func updateUserProfile(userID: UUID, draft: ProfileUpdateDraft) async throws -> UserProfile
 }
 
 protocol ContentServicing {
     func fetchSavedReviews(for userID: UUID) async throws -> [SavedReview]
     func fetchRecommendations(for userID: UUID) async throws -> [RecommendationItem]
+    func saveReview(productID: UUID, status: SafetyLevel, for userID: UUID) async throws
+    func deleteSavedReview(reviewID: UUID, for userID: UUID) async throws
 }
 
 protocol ScanServicing {
@@ -31,15 +35,15 @@ enum AppServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidRegistration:
-            return "Kayit bilgileri eksik veya gecersiz."
+            return "Registration details are missing or invalid."
         case .invalidCredentials:
-            return "Email veya password hatali."
+            return "Email or password is incorrect."
         case .invalidOTP:
-            return "OTP kodu gecersiz."
+            return "The OTP code is invalid."
         case .missingSession:
-            return "Oturum bulunamadi."
+            return "No session found."
         case .unsupportedBarcode:
-            return "Bu barkod icin sonuc bulunamadi."
+            return "No result was found for this barcode."
         }
     }
 }
@@ -143,12 +147,35 @@ struct MockAuthService: AuthServicing {
             refreshToken: "mock-refresh-token"
         )
     }
+
+    func logout(session: AuthSession) async throws {
+        try await Task.sleep(for: .milliseconds(150))
+    }
 }
 
 struct MockProfileService: ProfileServicing {
     func fetchUserProfile(userID: UUID) async throws -> UserProfile {
         try await Task.sleep(for: .milliseconds(300))
         return AppMockData.profile
+    }
+
+    func updateUserProfile(userID: UUID, draft: ProfileUpdateDraft) async throws -> UserProfile {
+        try await Task.sleep(for: .milliseconds(300))
+
+        return UserProfile(
+            id: userID,
+            firstName: draft.firstName,
+            lastName: draft.lastName,
+            email: AppMockData.profile.email,
+            age: AppMockData.profile.age,
+            skinType: draft.skinType,
+            condition: draft.condition,
+            sensitivity: draft.sensitivity,
+            allergies: draft.allergies
+                .split(separator: ",")
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+        )
     }
 }
 
@@ -161,6 +188,14 @@ struct MockContentService: ContentServicing {
     func fetchRecommendations(for userID: UUID) async throws -> [RecommendationItem] {
         try await Task.sleep(for: .milliseconds(250))
         return AppMockData.recommendations
+    }
+
+    func saveReview(productID: UUID, status: SafetyLevel, for userID: UUID) async throws {
+        try await Task.sleep(for: .milliseconds(250))
+    }
+
+    func deleteSavedReview(reviewID: UUID, for userID: UUID) async throws {
+        try await Task.sleep(for: .milliseconds(200))
     }
 }
 

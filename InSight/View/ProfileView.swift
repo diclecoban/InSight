@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ProfileView: View {
     @Environment(AppStateViewModel.self) private var appState
+    @State private var isShowingEditProfile = false
 
     private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
     private let accentColor = Color(red: 0.953, green: 0.643, blue: 0.286)
@@ -109,6 +110,7 @@ struct ProfileView: View {
 
                             VStack(spacing: 10) {
                                 Button {
+                                    isShowingEditProfile = true
                                 } label: {
                                     Text("Edit Profile")
                                         .font(.system(size: 15, weight: .semibold, design: .rounded))
@@ -131,6 +133,18 @@ struct ProfileView: View {
                                                 .stroke(accentColor.opacity(0.4), lineWidth: 1.5)
                                         }
                                 }
+
+                                Button {
+                                    appState.signOut()
+                                } label: {
+                                    Text("Sign Out")
+                                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(Color(red: 0.925, green: 0.302, blue: 0.302))
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 14)
+                                        .background(Color(red: 0.925, green: 0.302, blue: 0.302).opacity(0.08))
+                                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                }
                             }
                         }
                         .padding(.horizontal, 22)
@@ -140,6 +154,10 @@ struct ProfileView: View {
                 }
                 .padding(.top, 22)
             }
+        }
+        .sheet(isPresented: $isShowingEditProfile) {
+            EditProfileView(profile: profile)
+                .environment(appState)
         }
     }
 }
@@ -187,6 +205,171 @@ private struct ProfileMetricCard: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(Color(red: 0.972, green: 0.978, blue: 0.975))
         )
+    }
+}
+
+private struct EditProfileView: View {
+    @Environment(AppStateViewModel.self) private var appState
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var draft: ProfileUpdateDraft
+
+    private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
+    private let accentColor = Color(red: 0.953, green: 0.643, blue: 0.286)
+    private let skinTypeOptions = ["Oily", "Combination", "Dry", "Sensitive", "Normal"]
+    private let sensitivityOptions = ["Low", "Medium", "High"]
+
+    init(profile: UserProfile) {
+        _draft = State(initialValue: ProfileUpdateDraft(profile: profile))
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color(red: 0.972, green: 0.978, blue: 0.975)
+                    .ignoresSafeArea()
+
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 18) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Edit Profile")
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .foregroundStyle(.black)
+
+                            Text("Keep your health DNA current for better product guidance.")
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                .foregroundStyle(Color.black.opacity(0.56))
+                        }
+
+                        VStack(spacing: 12) {
+                            ProfileEditField(title: "First Name", text: $draft.firstName)
+                            ProfileEditField(title: "Last Name", text: $draft.lastName)
+
+                            ProfileEditMenu(
+                                title: "Skin Type",
+                                selection: $draft.skinType,
+                                options: skinTypeOptions
+                            )
+
+                            ProfileEditField(title: "Condition", text: $draft.condition)
+
+                            ProfileEditMenu(
+                                title: "Sensitivity",
+                                selection: $draft.sensitivity,
+                                options: sensitivityOptions
+                            )
+
+                            ProfileEditField(title: "Allergies", text: $draft.allergies)
+                        }
+                        .padding(18)
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
+
+                        if let errorMessage = appState.errorMessage {
+                            Text(errorMessage)
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundStyle(Color(red: 0.925, green: 0.302, blue: 0.302))
+                                .multilineTextAlignment(.leading)
+                        }
+
+                        Button {
+                            Task {
+                                await appState.updateProfile(draft: draft)
+
+                                if appState.errorMessage == nil {
+                                    dismiss()
+                                }
+                            }
+                        } label: {
+                            Text(appState.isLoading ? "Saving..." : "Save Changes")
+                                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 15)
+                                .background(accentColor)
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                        .disabled(appState.isLoading || !isValid)
+                    }
+                    .padding(.horizontal, 22)
+                    .padding(.top, 28)
+                    .padding(.bottom, 36)
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundStyle(backgroundColor)
+                }
+            }
+        }
+    }
+
+    private var isValid: Bool {
+        !draft.firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !draft.lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !draft.skinType.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+}
+
+private struct ProfileEditField: View {
+    let title: String
+    @Binding var text: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.black.opacity(0.48))
+
+            TextField(title, text: $text)
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(Color(red: 0.972, green: 0.978, blue: 0.975))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
+    }
+}
+
+private struct ProfileEditMenu: View {
+    let title: String
+    @Binding var selection: String
+    let options: [String]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.black.opacity(0.48))
+
+            Menu {
+                ForEach(options, id: \.self) { option in
+                    Button(option) {
+                        selection = option
+                    }
+                }
+            } label: {
+                HStack {
+                    Text(selection.isEmpty ? title : selection)
+                        .foregroundStyle(selection.isEmpty ? Color.black.opacity(0.42) : .black)
+
+                    Spacer()
+
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color.black.opacity(0.4))
+                }
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(Color(red: 0.972, green: 0.978, blue: 0.975))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+        }
     }
 }
 

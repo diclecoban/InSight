@@ -8,32 +8,26 @@
 import SwiftUI
 
 struct ProductPageOneView: View {
-    private let score: Double = 0.7
-    @State private var userName: String = "Susan Clay"
+    @Environment(AppStateViewModel.self) private var appState
+    @State private var didShowSavedMessage = false
 
     private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
     private let accentColor = Color(red: 0.953, green: 0.643, blue: 0.286)
 
+    private var scanResult: ScanResult {
+        appState.latestScanResult ?? AppMockData.sampleScanResult
+    }
+
+    private var score: Double {
+        scanResult.score
+    }
+
     private var safetyText: String {
-        switch score {
-        case 0.8...1.0:
-            return "Safe!"
-        case 0.5..<0.8:
-            return "Mostly Safe!"
-        default:
-            return "Risky!"
-        }
+        scanResult.safetyLevel.title
     }
 
     private var safetyColor: Color {
-        switch score {
-        case 0.8...1.0:
-            return Color(red: 0.255, green: 0.694, blue: 0.427)
-        case 0.5..<0.8:
-            return accentColor
-        default:
-            return Color(red: 0.925, green: 0.302, blue: 0.302)
-        }
+        scanResult.safetyLevel.color
     }
 
     var body: some View {
@@ -51,11 +45,21 @@ struct ProductPageOneView: View {
                             .ignoresSafeArea(edges: .bottom)
 
                         VStack(spacing: 22) {
-                            ProductHeroCard()
+                            ProductHeroCard(product: scanResult.product, tint: safetyColor)
                                 .offset(y: -56)
                                 .padding(.bottom, -30)
 
                             VStack(spacing: 10) {
+                                Text(scanResult.product.brand)
+                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(Color.black.opacity(0.45))
+
+                                Text(scanResult.product.name)
+                                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.black)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 24)
+
                                 Text("This Product is")
                                     .font(.system(size: 26, weight: .bold, design: .rounded))
                                     .foregroundStyle(.black)
@@ -66,7 +70,37 @@ struct ProductPageOneView: View {
                             }
                             .multilineTextAlignment(.center)
 
+                            Text(scanResult.summary)
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                .foregroundStyle(Color.black.opacity(0.58))
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 28)
+
                             SafetyBar(score: score, tint: safetyColor)
+
+                            Button {
+                                Task {
+                                    await appState.saveLatestScanResult()
+                                    if appState.errorMessage == nil {
+                                        didShowSavedMessage = true
+                                    }
+                                }
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: appState.isLatestScanSaved ? "bookmark.fill" : "bookmark")
+                                        .font(.system(size: 15, weight: .bold))
+
+                                    Text(appState.isLatestScanSaved ? "Saved to Reviews" : "Save Review")
+                                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                }
+                                .foregroundStyle(appState.isLatestScanSaved ? accentColor : .white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 15)
+                                .background(appState.isLatestScanSaved ? accentColor.opacity(0.12) : accentColor)
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            }
+                            .padding(.horizontal, 24)
+                            .disabled(appState.isLoading || appState.isLatestScanSaved)
 
                             NavigationLink {
                                 DetailReview()
@@ -80,6 +114,20 @@ struct ProductPageOneView: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                             }
                             .padding(.horizontal, 24)
+
+                            if let errorMessage = appState.errorMessage {
+                                Text(errorMessage)
+                                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                                    .foregroundStyle(Color(red: 0.925, green: 0.302, blue: 0.302))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 28)
+                            } else if didShowSavedMessage {
+                                Text("This analysis is now available in Saved Reviews.")
+                                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                                    .foregroundStyle(Color.black.opacity(0.5))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 28)
+                            }
 
                             Spacer(minLength: 120)
                         }
@@ -99,7 +147,7 @@ struct ProductPageOneView: View {
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
 
-                Text(userName)
+                Text(appState.displayName)
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.82))
             }
@@ -118,6 +166,9 @@ struct ProductPageOneView: View {
 }
 
 private struct ProductHeroCard: View {
+    let product: Product
+    let tint: Color
+
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
@@ -139,20 +190,15 @@ private struct ProductHeroCard: View {
                 .frame(width: 132, height: 132)
                 .overlay {
                     VStack(spacing: 10) {
-                        Image(systemName: "person.crop.circle.fill")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 74, height: 74)
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [
-                                        Color(red: 0.345, green: 0.345, blue: 0.345),
-                                        Color(red: 0.176, green: 0.176, blue: 0.176)
-                                    ],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
+                        Image(systemName: "shippingbox.fill")
+                            .font(.system(size: 46, weight: .semibold))
+                            .foregroundStyle(tint)
+
+                        Text(product.brand)
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.black.opacity(0.55))
+                            .lineLimit(1)
+                            .padding(.horizontal, 14)
 
                         HStack(spacing: 4) {
                             ForEach(0..<4, id: \.self) { _ in
@@ -204,4 +250,5 @@ private struct SafetyBar: View {
 
 #Preview {
     ProductPageOneView()
+        .environment(AppStateViewModel())
 }

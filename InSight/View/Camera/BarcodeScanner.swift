@@ -25,7 +25,7 @@ class BarcodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
         session.addOutput(output)
         output.setMetadataObjectsDelegate(self, queue: .main)
         
-        // Barkod tipleri
+        // Barcode types
         output.metadataObjectTypes = [
             .ean8, .ean13, .qr, .upce, .code128
         ]
@@ -49,7 +49,7 @@ class BarcodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
         device.unlockForConfiguration()
     }
     
-    // Barkod okunduğunda çağrılır
+    // Called when a barcode is scanned
     func metadataOutput(_ output: AVCaptureMetadataOutput,
                         didOutput objects: [AVMetadataObject],
                         from connection: AVCaptureConnection) {

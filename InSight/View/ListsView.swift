@@ -51,8 +51,16 @@ struct ListsView: View {
                                 .font(.system(size: 20, weight: .bold, design: .rounded))
                                 .foregroundStyle(.black)
 
-                            ForEach(appState.savedReviews) { product in
-                                SavedProductCard(product: product)
+                            if appState.savedReviews.isEmpty {
+                                EmptySavedReviewsView()
+                            } else {
+                                ForEach(appState.savedReviews) { product in
+                                    SavedProductCard(product: product) {
+                                        Task {
+                                            await appState.deleteSavedReview(product)
+                                        }
+                                    }
+                                }
                             }
 
                             VStack(alignment: .leading, spacing: 10) {
@@ -83,6 +91,7 @@ struct ListsView: View {
 
 private struct SavedProductCard: View {
     let product: SavedReview
+    let onDelete: () -> Void
 
     var body: some View {
         HStack(spacing: 14) {
@@ -106,15 +115,46 @@ private struct SavedProductCard: View {
 
             Spacer()
 
-            Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(Color.black.opacity(0.25))
+            Button(action: onDelete) {
+                Image(systemName: "trash")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color(red: 0.925, green: 0.302, blue: 0.302))
+                    .frame(width: 34, height: 34)
+                    .background(Color(red: 0.925, green: 0.302, blue: 0.302).opacity(0.08))
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
         }
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(Color.white)
                 .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
+        )
+    }
+}
+
+private struct EmptySavedReviewsView: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Image(systemName: "bookmark")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(Color(red: 0.459, green: 0.643, blue: 0.533))
+
+            Text("No saved reviews yet")
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundStyle(.black)
+
+            Text("Scan a product and save the analysis to keep it here.")
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(Color.black.opacity(0.58))
+                .lineSpacing(3)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(Color(red: 0.972, green: 0.978, blue: 0.975))
         )
     }
 }

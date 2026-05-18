@@ -8,16 +8,18 @@
 import SwiftUI
 
 struct DetailReview: View {
-    @State private var userName: String = "Susan Clay"
+    @Environment(AppStateViewModel.self) private var appState
 
     private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
     private let accentColor = Color(red: 0.953, green: 0.643, blue: 0.286)
 
-    private let ingredients = [
-        "Water, Glycerin, Butylene Glycol, Niacinamide, Sodium Hyaluronate, Tocopherol, Panthenol, Fragrance",
-        "Contains fragrance and alcohol derivatives that may irritate sensitive skin in repeated use.",
-        "Low-risk hydration ingredients are present, but the formula is not ideal for very reactive skin."
-    ]
+    private var scanResult: ScanResult {
+        appState.latestScanResult ?? AppMockData.sampleScanResult
+    }
+
+    private var scoreText: String {
+        "Score \(Int(scanResult.score * 100)) / 100"
+    }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -31,7 +33,7 @@ struct DetailReview: View {
                             .font(.system(size: 24, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
 
-                        Text(userName)
+                        Text(appState.displayName)
                             .font(.system(size: 13, weight: .medium, design: .rounded))
                             .foregroundStyle(.white.opacity(0.82))
                     }
@@ -65,14 +67,15 @@ struct DetailReview: View {
                                     }
 
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Text("CERAVE Cleanser")
+                                    Text(scanResult.product.name)
                                         .font(.system(size: 19, weight: .bold, design: .rounded))
+                                        .lineLimit(2)
 
-                                    Text("Score 70 / 100")
+                                    Text(scoreText)
                                         .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                        .foregroundStyle(accentColor)
+                                        .foregroundStyle(scanResult.safetyLevel.color)
 
-                                    Text("The product is 70% safe.")
+                                    Text(scanResult.summary)
                                         .font(.system(size: 12, weight: .medium, design: .rounded))
                                         .foregroundStyle(Color.black.opacity(0.6))
                                 }
@@ -87,17 +90,21 @@ struct DetailReview: View {
                             )
 
                             DetailSection(title: "Overview") {
-                                Text("This formula delivers hydration and barrier support, but a few components may not suit highly sensitive users.")
+                                Text(scanResult.summary)
                             }
 
                             DetailSection(title: "Ingredients") {
-                                ForEach(ingredients, id: \.self) { item in
-                                    Text(item)
+                                if scanResult.ingredients.isEmpty {
+                                    Text("No ingredient details were found for this product.")
+                                } else {
+                                    ForEach(scanResult.ingredients) { ingredient in
+                                        IngredientDetailRow(ingredient: ingredient)
+                                    }
                                 }
                             }
 
                             DetailSection(title: "Why It Matters") {
-                                Text("Humectants like glycerin help retain water, while fragrance can raise irritation risk depending on skin sensitivity.")
+                                Text(personalizedExplanation)
                             }
                         }
                         .font(.system(size: 13, weight: .medium, design: .rounded))
@@ -111,6 +118,22 @@ struct DetailReview: View {
             }
         }
         .toolbar(.hidden, for: .navigationBar)
+    }
+
+    private var personalizedExplanation: String {
+        let allergyMatches = scanResult.ingredients
+            .map(\.name)
+            .filter { ingredientName in
+                appState.userProfile?.allergies.contains(where: {
+                    $0.caseInsensitiveCompare(ingredientName) == .orderedSame
+                }) ?? false
+            }
+
+        if allergyMatches.isEmpty {
+            return "The score is based on the ingredient risk notes available for this product."
+        }
+
+        return "\(allergyMatches.joined(separator: ", ")) appears in your allergy list, so this product may need extra caution."
     }
 }
 
@@ -137,6 +160,27 @@ private struct DetailSection<Content: View>: View {
     }
 }
 
+private struct IngredientDetailRow: View {
+    let ingredient: IngredientInsight
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(ingredient.name)
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundStyle(.black)
+
+            Text(ingredient.detail)
+                .foregroundStyle(Color.black.opacity(0.68))
+
+            Text(ingredient.riskNote)
+                .foregroundStyle(Color.black.opacity(0.52))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 4)
+    }
+}
+
 #Preview {
     DetailReview()
+        .environment(AppStateViewModel())
 }

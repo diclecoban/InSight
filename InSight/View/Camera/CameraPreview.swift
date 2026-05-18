@@ -30,7 +30,7 @@ class CameraView: UIView {
         super.layoutSubviews()
         previewLayer.session = session
         previewLayer.videoGravity = .resizeAspectFill
-        previewLayer.frame = bounds // bounds artık doğru boyutta
+        previewLayer.frame = bounds // bounds now has the correct size
     }
 }
 

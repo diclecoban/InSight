@@ -44,6 +44,24 @@ struct APIAuthService: AuthServicing {
         let response: AuthResponse = try await client.request(endpoint)
         return response.toDomain()
     }
+
+    func logout(session: AuthSession) async throws {
+        let requestBody = try client.encodeBody(LogoutRequest(
+            authToken: session.authToken,
+            refreshToken: session.refreshToken
+        ))
+        let endpoint = APIEndpoint(
+            path: "/auth/logout",
+            method: .post,
+            headers: [
+                "Authorization": "Bearer \(session.authToken)",
+                "Content-Type": "application/json"
+            ],
+            body: requestBody
+        )
+
+        try await client.request(endpoint)
+    }
 }
 
 private struct RegisterRequest: Encodable {
@@ -79,6 +97,11 @@ private struct LoginRequest: Encodable {
 private struct OTPVerificationRequest: Encodable {
     let email: String
     let code: String
+}
+
+private struct LogoutRequest: Encodable {
+    let authToken: String
+    let refreshToken: String
 }
 
 private struct AuthResponse: Decodable {

@@ -6,8 +6,11 @@ struct ScanView: View {
     @State private var scanner = BarcodeScanner()
     @State private var scannedCode: String = ""
     @State private var showResult = false
+    @State private var isFlashOn = false
+    @State private var goToResult = false
 
     var body: some View {
+        NavigationStack {
         ZStack {
             CameraPreview(session: scanner.session)
                 .ignoresSafeArea()
@@ -109,8 +112,12 @@ struct ScanView: View {
         .compositingGroup()
         .onAppear { scanner.startSession() }
         .onDisappear { scanner.stopSession() }
-        .alert("Barkod Okundu", isPresented: $showResult) {
-            Button("Tamam") {
+        .navigationDestination(isPresented: $goToResult) {
+            ProductPageOneView()
+        }
+    }
+        .alert("Barcode Scanned", isPresented: $showResult) {
+            Button("OK") {
             }
         } message: {
             Text(scannedCode)
@@ -121,6 +128,10 @@ struct ScanView: View {
                 showResult = true
                 Task {
                     await appState.analyzeBarcode(code)
+
+                    if appState.errorMessage == nil {
+                        goToResult = true
+                    }
                 }
             }
         }

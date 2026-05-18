@@ -1,20 +1,99 @@
 const pool = require('../config/db');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
+const { sendVerificationEmail } = require('../services/emailService');
 
 const createToken = () => crypto.randomBytes(32).toString('hex');
+// Amaç: Raw token’ı DB’ye koymadan önce SHA-256 ile hashlemek. Böylece DB sızarsa gerçek token’lar görülmez.
+const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex'); 
 const normalizeEmail = (email) => (
     typeof email === 'string' ? email.trim().toLowerCase() : ''
 );
 const normalizeVerificationCode = (code) => String(code ?? '').trim();
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-const buildAuthResponse = (user, message) => ({
-    userID: user.id,
-    email: user.email,
-    authToken: createToken(),
-    refreshToken: createToken(),
-    message
-});
+const createAuthSession = async (client, user, message) => {
+    const authToken = createToken();
+    const refreshToken = createToken();
+
+    await client.query(
+        `
+        INSERT INTO auth_sessions ("userID", auth_token_hash, refresh_token_hash, expires_at)
+        VALUES ($1, $2, $3, $4)
+        `,
+        [
+            user.id,
+            hashToken(authToken),
+            hashToken(refreshToken),
+            new Date(Date.now() + SESSION_TTL_MS)
+        ]
+    );
+
+    return {
+        userID: user.id,
+        email: user.email,
+        authToken,
+        refreshToken,
+        message
+    };
+};
+
+const sendAuthResponse = (res, statusCode, body) => (
+    res
+        .set('Cache-Control', 'no-store')
+        .set('Pragma', 'no-cache')
+        .status(statusCode)
+        .json(body)
+);
+
+exports.refresh = async (req, res) => {
+    try {
+        const refreshToken = String(req.body.refreshToken || '').trim();
+
+        if (!refreshToken) {
+            return sendAuthResponse(res, 401, { error: "Invalid refresh token." });
+        }
+
+        const authToken = createToken();
+        const newRefreshToken = createToken();
+        const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+
+        const result = await pool.query(
+            `
+            UPDATE auth_sessions AS session
+            SET auth_token_hash = $2,
+                refresh_token_hash = $3,
+                expires_at = $4
+            FROM users
+            WHERE session."userID" = users.id
+              AND session.refresh_token_hash = $1
+              AND session.expires_at > NOW()
+            RETURNING session."userID", users.email
+            `,
+            [
+                hashToken(refreshToken),
+                hashToken(authToken),
+                hashToken(newRefreshToken),
+                expiresAt
+            ]
+        );
+
+        if (result.rows.length === 0) {
+            return sendAuthResponse(res, 401, { error: "Invalid refresh token." });
+        }
+
+        return sendAuthResponse(res, 200, {
+            userID: result.rows[0].userID,
+            email: result.rows[0].email,
+            authToken,
+            refreshToken: newRefreshToken,
+            message: "Session refreshed successfully."
+        });
+    } catch (err) {
+        console.error("Refresh Token Error:", err);
+        return res.status(500).json({ error: "An unexpected error occurred on the server." });
+    }
+};
 
 // 🎀 --- USER REGISTRATION --- 🎀 //
 
@@ -31,7 +110,7 @@ exports.register = async (req, res) => {
             gender,
             skinType, 
             allergies
-        } = req.body;
+        } = req.body; // Reads data sent from the frontend.
         const normalizedEmail = normalizeEmail(email);
 
         if (!normalizedEmail || !password || !firstName || !lastName || !birthDate || !gender || !skinType) {
@@ -87,18 +166,25 @@ exports.register = async (req, res) => {
             allergiesArray
         ]);
 
-        await client.query('COMMIT');
-
         console.log(`--------------------------------------------------`);
         console.log(`✅ NEW USER REGISTERED`);
         console.log(`📧 Email: ${normalizedEmail}`);
         console.log(`🔑 OTP: ${verificationCode}`);
         console.log(`--------------------------------------------------`);
 
-        return res.status(201).json(buildAuthResponse(
+        const authResponse = await createAuthSession(
+            client,
             { id: userId, email: normalizedEmail },
             "Registration successful. Please verify your email."
-        ));
+        );
+
+        await client.query('COMMIT');
+
+        sendVerificationEmail(normalizedEmail, verificationCode).catch((error) => {
+            console.error("Verification Email Error:", error.message);
+        });
+
+        return sendAuthResponse(res, 201, authResponse);
 
     } catch (error) {
         await client.query('ROLLBACK');
@@ -136,7 +222,7 @@ exports.login = async (req, res) => {
 
         const user = userResult.rows[0];
 
-        // bcrypt.compare: Gelen şifreyi hashleyip veritabanındakiyle karşılaştırır
+        // bcrypt.compare hashes the incoming password and compares it with the database value.
         const isMatch = await bcrypt.compare(password, user.password_hash);
 
         if (!isMatch) {
@@ -147,7 +233,8 @@ exports.login = async (req, res) => {
             return res.status(403).json({ error: "Please verify your email before logging in." });
         }
 
-        return res.status(200).json(buildAuthResponse(user, "Login successful!"));
+        const authResponse = await createAuthSession(pool, user, "Login successful!");
+        return sendAuthResponse(res, 200, authResponse);
 
     } catch (err) {
         console.error("Login Error:", err);
@@ -191,10 +278,53 @@ exports.verifyOTP = async (req, res) => {
             [normalizedEmail]
         );
 
-        res.status(200).json(buildAuthResponse(user, "Email verified successfully!"));
+        const authResponse = await createAuthSession(pool, user, "Email verified successfully!");
+        return sendAuthResponse(res, 200, authResponse);
 
     } catch (err) {
         console.error("OTP Error:", err);
         res.status(500).json({ error: "An error occurred during verification." });
+    }
+};
+
+// 🎀 --- USER LOGOUT --- 🎀 //
+
+exports.logout = async (req, res) => {
+    try {
+        const authorization = req.headers.authorization || '';
+        const bearerToken = authorization.startsWith('Bearer ')
+            ? authorization.slice('Bearer '.length).trim()
+            : '';
+        const authToken = String(req.body.authToken || bearerToken || '').trim();
+        const refreshToken = String(req.body.refreshToken || '').trim();
+
+        if (!authToken && !refreshToken) {
+            return res.status(400).json({ error: "authToken or refreshToken is required." });
+        }
+
+        const conditions = [];
+        const values = [];
+
+        if (authToken) {
+            values.push(hashToken(authToken));
+            conditions.push(`auth_token_hash = $${values.length}`);
+        }
+
+        if (refreshToken) {
+            values.push(hashToken(refreshToken));
+            conditions.push(`refresh_token_hash = $${values.length}`);
+        }
+
+        const result = await pool.query(
+            `DELETE FROM auth_sessions WHERE ${conditions.join(' OR ')} RETURNING id`,
+            values
+        );
+
+        return res.status(200).json({
+            message: result.rows.length > 0 ? "Logout successful." : "Session already expired."
+        });
+    } catch (err) {
+        console.error("Logout Error:", err);
+        return res.status(500).json({ error: "An unexpected error occurred on the server." });
     }
 };

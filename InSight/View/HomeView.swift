@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct HomeView: View {
+    @Environment(AppStateViewModel.self) private var appState
     @State var userName: String = "Susan Clay"
 
     private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
@@ -89,14 +90,19 @@ struct HomeView: View {
                                 .font(.system(size: 16, weight: .bold, design: .rounded))
                                 .padding(.horizontal, 24)
 
-                            RecommendationCard(
-                                title: "Ingredient of the Day",
-                                subtitle: "It is you"
-                            )
-                            RecommendationCard(
-                                title: "Why Avoid Palm Oil?",
-                                subtitle: "Rosaville"
-                            )
+                            if appState.recommendations.isEmpty {
+                                RecommendationCard(
+                                    title: "No recommendations yet",
+                                    subtitle: "Scan a product to personalize this area."
+                                )
+                            } else {
+                                ForEach(appState.recommendations) { recommendation in
+                                    RecommendationCard(
+                                        title: recommendation.title,
+                                        subtitle: recommendation.subtitle
+                                    )
+                                }
+                            }
                         }
 
                         Spacer(minLength: 96)
@@ -168,4 +174,5 @@ var greeting: String {
 
 #Preview {
     HomeView()
+        .environment(AppStateViewModel())
 }

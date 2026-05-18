@@ -8,9 +8,9 @@ enum APIClientError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidURL:
-            return "URL gecersiz."
+            return "Invalid URL."
         case .invalidResponse:
-            return "Sunucudan gecersiz response dondu."
+            return "The server returned an invalid response."
         case let .requestFailed(statusCode, message):
             return "Request failed (\(statusCode)): \(message)"
         }
@@ -26,7 +26,7 @@ struct APIClient {
     init(
         baseURL: URL,
         session: URLSession = .shared,
-        decoder: JSONDecoder = JSONDecoder(),
+        decoder: JSONDecoder = APIClient.defaultDecoder(),
         encoder: JSONEncoder = JSONEncoder()
     ) {
         self.baseURL = baseURL
@@ -52,6 +52,32 @@ struct APIClient {
 
     func encodeBody<Body: Encodable>(_ body: Body) throws -> Data {
         try encoder.encode(body)
+    }
+
+    private static func defaultDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let value = try container.decode(String.self)
+
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+            if let date = formatter.date(from: value) {
+                return date
+            }
+
+            formatter.formatOptions = [.withInternetDateTime]
+            if let date = formatter.date(from: value) {
+                return date
+            }
+
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Invalid date format: \(value)"
+            )
+        }
+        return decoder
     }
 
     private func validate(response: URLResponse, data: Data) throws {

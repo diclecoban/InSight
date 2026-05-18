@@ -52,6 +52,13 @@ final class AppStateViewModel {
         userProfile?.firstName ?? "Guest"
     }
 
+    var isLatestScanSaved: Bool {
+        guard let latestScanResult else { return false }
+        return savedReviews.contains { review in
+            review.productName == latestScanResult.product.name
+        }
+    }
+
     func updateRegistrationDraft(_ draft: RegistrationDraft) {
         registrationDraft = draft
     }
@@ -88,9 +95,63 @@ final class AppStateViewModel {
         }
     }
 
+    func saveLatestScanResult() async {
+        await performRequest {
+            guard let userID = session?.userID else {
+                throw AppServiceError.missingSession
+            }
+            guard let latestScanResult else {
+                throw AppServiceError.unsupportedBarcode
+            }
+
+            try await contentService.saveReview(
+                productID: latestScanResult.product.id,
+                status: latestScanResult.safetyLevel,
+                for: userID
+            )
+            savedReviews = try await contentService.fetchSavedReviews(for: userID)
+        }
+    }
+
+    func deleteSavedReview(_ review: SavedReview) async {
+        await performRequest {
+            guard let userID = session?.userID else {
+                throw AppServiceError.missingSession
+            }
+
+            try await contentService.deleteSavedReview(reviewID: review.id, for: userID)
+            savedReviews.removeAll { $0.id == review.id }
+        }
+    }
+
+    func updateProfile(draft: ProfileUpdateDraft) async {
+        await performRequest {
+            guard let userID = session?.userID else {
+                throw AppServiceError.missingSession
+            }
+
+            userProfile = try await profileService.updateUserProfile(
+                userID: userID,
+                draft: draft
+            )
+        }
+    }
+
     func signOut() {
+        let sessionToLogout = session
+
         session = nil
+        userProfile = nil
+        savedReviews = []
+        recommendations = []
+        latestScanResult = nil
         errorMessage = nil
+
+        if let sessionToLogout {
+            Task {
+                try? await authService.logout(session: sessionToLogout)
+            }
+        }
     }
 
     func resetRegistrationFlow() {

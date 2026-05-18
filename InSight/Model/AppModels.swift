@@ -107,3 +107,23 @@ struct RegistrationDraft: Equatable {
     var skinType = ""
     var allergies = ""
 }
+
+struct ProfileUpdateDraft: Equatable {
+    var firstName = ""
+    var lastName = ""
+    var skinType = ""
+    var condition = ""
+    var sensitivity = ""
+    var allergies = ""
+
+    init() {}
+
+    init(profile: UserProfile) {
+        firstName = profile.firstName
+        lastName = profile.lastName
+        skinType = profile.skinType
+        condition = profile.condition
+        sensitivity = profile.sensitivity
+        allergies = profile.allergies.joined(separator: ", ")
+    }
+}
