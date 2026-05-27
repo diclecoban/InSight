@@ -141,3 +141,28 @@ Registration sends the OTP code by email. Create `Backend/.env` from `Backend/.e
 - `SMTP_USER`
 - `SMTP_PASS`
 - `MAIL_FROM`
+
+For Gmail, use an app password instead of your normal account password:
+
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-google-app-password
+MAIL_FROM="InSight <your-email@gmail.com>"
+```
+
+Verify the SMTP login:
+
+```sh
+cd Backend
+npm run email:verify
+```
+
+Send a test OTP email:
+
+```sh
+cd Backend
+npm run email:verify -- your-email@gmail.com
+```

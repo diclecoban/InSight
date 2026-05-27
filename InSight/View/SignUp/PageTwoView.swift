@@ -9,7 +9,7 @@ import SwiftUI
 
 struct PageTwoView: View {
     @Environment(AppStateViewModel.self) private var appState
-    @State private var birthDate = Date()
+    @State private var age = 18
     @State private var gender: String = ""
     @State private var skinType: String = ""
     @State private var allergies: String = ""
@@ -33,18 +33,29 @@ struct PageTwoView: View {
                 Text("Sign Up")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
 
-                DatePicker(
-                    "Date of Birth",
-                    selection: $birthDate,
-                    in: ...Date(),
-                    displayedComponents: .date
-                )
-                .datePickerStyle(.compact)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(Color.white.opacity(0.95))
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                Menu {
+                    ForEach(12...100, id: \.self) { option in
+                        Button("\(option)") {
+                            age = option
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Text("Age: \(age)")
+                            .foregroundStyle(.black)
+
+                        Spacer()
+
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.black.opacity(0.45))
+                    }
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(Color.white.opacity(0.95))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
 
                 Menu {
                     ForEach(genderOptions, id: \.self) { option in
@@ -134,7 +145,7 @@ struct PageTwoView: View {
                             firstName: appState.registrationDraft.firstName,
                             lastName: appState.registrationDraft.lastName,
                             password: appState.registrationDraft.password,
-                            birthDate: birthDate,
+                            age: age,
                             gender: gender,
                             skinType: skinType,
                             allergies: allergies
@@ -190,7 +201,7 @@ struct PageTwoView: View {
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {
             let draft = appState.registrationDraft
-            birthDate = draft.birthDate
+            age = draft.age
             gender = draft.gender
             skinType = draft.skinType
             allergies = draft.allergies

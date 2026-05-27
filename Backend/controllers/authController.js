@@ -10,6 +10,112 @@ const normalizeEmail = (email) => (
     typeof email === 'string' ? email.trim().toLowerCase() : ''
 );
 const normalizeVerificationCode = (code) => String(code ?? '').trim();
+const normalizeGender = (gender) => {
+    const normalized = String(gender ?? '').trim().toLowerCase();
+
+    if (normalized === 'non-binary' || normalized === 'non binary') {
+        return 'other';
+    }
+
+    return normalized;
+};
+const isBlank = (value) => (
+    typeof value !== 'string' || value.trim().length === 0
+);
+const validateRegistrationBody = (body) => {
+    const errors = [];
+    const normalizedEmail = normalizeEmail(body.email);
+    const normalizedGender = normalizeGender(body.gender);
+    const age = Number(body.age);
+
+    if (!normalizedEmail) {
+        errors.push({ field: 'email', message: 'email is required.' });
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+        errors.push({ field: 'email', message: 'email must be a valid email address.' });
+    }
+
+    if (isBlank(body.password)) {
+        errors.push({ field: 'password', message: 'password is required.' });
+    } else if (body.password.length < 6) {
+        errors.push({ field: 'password', message: 'password must be at least 6 characters.' });
+    }
+
+    if (isBlank(body.firstName)) {
+        errors.push({ field: 'firstName', message: 'firstName is required.' });
+    }
+
+    if (isBlank(body.lastName)) {
+        errors.push({ field: 'lastName', message: 'lastName is required.' });
+    }
+
+    if (body.age === undefined || body.age === null || body.age === '') {
+        errors.push({ field: 'age', message: 'age is required.' });
+    } else if (!Number.isInteger(age) || age < 12 || age > 120) {
+        errors.push({ field: 'age', message: 'age must be an integer between 12 and 120.' });
+    }
+
+    if (!normalizedGender) {
+        errors.push({ field: 'gender', message: 'gender is required.' });
+    } else if (!['male', 'female', 'other'].includes(normalizedGender)) {
+        errors.push({ field: 'gender', message: 'gender must be one of: male, female, other.' });
+    }
+
+    if (isBlank(body.skinType)) {
+        errors.push({ field: 'skinType', message: 'skinType is required.' });
+    }
+
+    if (body.allergies !== undefined && !Array.isArray(body.allergies)) {
+        errors.push({ field: 'allergies', message: 'allergies must be an array of strings.' });
+    } else if (Array.isArray(body.allergies) && body.allergies.some((allergy) => typeof allergy !== 'string')) {
+        errors.push({ field: 'allergies', message: 'allergies must only contain strings.' });
+    }
+
+    return {
+        errors,
+        normalizedEmail,
+        normalizedGender,
+        age
+    };
+};
+const registrationDatabaseError = (error) => {
+    if (error.code === '23505' && error.constraint === 'users_email_key') {
+        return {
+            status: 400,
+            body: {
+                error: 'Registration validation failed.',
+                details: [{ field: 'email', message: 'This email address is already registered.' }]
+            }
+        };
+    }
+
+    if (error.code === '23502') {
+        return {
+            status: 400,
+            body: {
+                error: 'Registration validation failed.',
+                details: [{ field: error.column || 'unknown', message: `${error.column || 'A required field'} cannot be null.` }]
+            }
+        };
+    }
+
+    if (error.code === '23514') {
+        const field = error.constraint === 'profiles_gender_check'
+            ? 'gender'
+            : error.constraint === 'profiles_age_check'
+                ? 'age'
+                : 'unknown';
+
+        return {
+            status: 400,
+            body: {
+                error: 'Registration validation failed.',
+                details: [{ field, message: `Database constraint failed: ${error.constraint || 'unknown constraint'}.` }]
+            }
+        };
+    }
+
+    return null;
+};
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 const createAuthSession = async (client, user, message) => {
@@ -98,7 +204,8 @@ exports.refresh = async (req, res) => {
 // 🎀 --- USER REGISTRATION --- 🎀 //
 
 exports.register = async (req, res) => {
-    const client = await pool.connect();
+    let client;
+    let transactionStarted = false;
 
     try {
         const { 
@@ -106,28 +213,25 @@ exports.register = async (req, res) => {
             password, 
             firstName, 
             lastName, 
-            birthDate,
             gender,
             skinType, 
             allergies
         } = req.body; // Reads data sent from the frontend.
-        const normalizedEmail = normalizeEmail(email);
+        const {
+            errors,
+            normalizedEmail,
+            normalizedGender,
+            age
+        } = validateRegistrationBody(req.body);
 
-        if (!normalizedEmail || !password || !firstName || !lastName || !birthDate || !gender || !skinType) {
-            return res.status(400).json({ 
-                error: "Missing required fields: email, password, firstName, lastName, birthDate, gender, and skinType are mandatory." 
-            });
-        }
-        if (password.length < 6) {
-            return res.status(400).json({ 
-                error: "Password is too short. Minimum 6 characters required." 
-            });
-        }
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
+        if (errors.length > 0) {
             return res.status(400).json({
-                error: "birthDate must be in yyyy-MM-dd format."
+                error: 'Registration validation failed.',
+                details: errors
             });
         }
+
+        client = await pool.connect();
 
         const saltRounds = 10;
         const passwordHash = await bcrypt.hash(password, saltRounds);
@@ -137,6 +241,7 @@ exports.register = async (req, res) => {
         const allergiesArray = Array.isArray(allergies) ? allergies : [];
 
         await client.query('BEGIN');
+        transactionStarted = true;
 
         const userInsertQuery = `
             INSERT INTO users (email, password_hash, verification_code, code_expires_at) 
@@ -153,15 +258,15 @@ exports.register = async (req, res) => {
         const userId = userResult.rows[0].id;
 
         const profileInsertQuery = `
-            INSERT INTO profiles ("userID", "firstName", "lastName", "birthDate", gender, "skinType", allergies) 
+            INSERT INTO profiles ("userID", "firstName", "lastName", age, gender, "skinType", allergies) 
             VALUES ($1, $2, $3, $4, $5, $6, $7)
         `;
         await client.query(profileInsertQuery, [
             userId, 
             firstName, 
             lastName, 
-            birthDate,
-            gender,
+            age,
+            normalizedGender,
             skinType, 
             allergiesArray
         ]);
@@ -179,6 +284,7 @@ exports.register = async (req, res) => {
         );
 
         await client.query('COMMIT');
+        transactionStarted = false;
 
         sendVerificationEmail(normalizedEmail, verificationCode).catch((error) => {
             console.error("Verification Email Error:", error.message);
@@ -187,17 +293,28 @@ exports.register = async (req, res) => {
         return sendAuthResponse(res, 201, authResponse);
 
     } catch (error) {
-        await client.query('ROLLBACK');
+        if (client && transactionStarted) {
+            await client.query('ROLLBACK');
+        }
 
-        if (error.code === '23505') { 
-            return res.status(400).json({ error: "This email address is already registered." });
+        const databaseError = registrationDatabaseError(error);
+        if (databaseError) {
+            return res.status(databaseError.status).json(databaseError.body);
         }
 
         console.error("Registration Error Details:", error);
-        return res.status(500).json({ error: "An unexpected error occurred on the server." });
+        return res.status(500).json({
+            error: "An unexpected error occurred on the server.",
+            details: {
+                code: error.code || 'unknown',
+                message: error.message
+            }
+        });
 
     } finally {
-        client.release();
+        if (client) {
+            client.release();
+        }
     }
 };
 

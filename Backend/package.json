@@ -5,6 +5,7 @@
   "scripts": {
     "migrate": "node scripts/migrate.js up",
     "migrate:status": "node scripts/migrate.js status",
+    "email:verify": "node scripts/verifyEmail.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

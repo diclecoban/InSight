@@ -69,7 +69,7 @@ private struct RegisterRequest: Encodable {
     let firstName: String
     let lastName: String
     let password: String
-    let birthDate: String
+    let age: Int
     let gender: String
     let skinType: String
     let allergies: [String]
@@ -79,8 +79,8 @@ private struct RegisterRequest: Encodable {
         firstName = draft.firstName
         lastName = draft.lastName
         password = draft.password
-        birthDate = draft.birthDate.formattedForAPI
-        gender = draft.gender
+        age = draft.age
+        gender = draft.gender.apiGenderValue
         skinType = draft.skinType
         allergies = draft.allergies
             .split(separator: ",")
@@ -120,12 +120,17 @@ private struct AuthResponse: Decodable {
     }
 }
 
-private extension Date {
-    var formattedForAPI: String {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: self)
+private extension String {
+    var apiGenderValue: String {
+        switch trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "female":
+            return "female"
+        case "male":
+            return "male"
+        case "non-binary", "non binary", "other":
+            return "other"
+        default:
+            return self
+        }
     }
 }

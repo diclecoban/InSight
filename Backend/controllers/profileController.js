@@ -27,7 +27,7 @@ exports.getProfile = async (req, res) => {
                 COALESCE(p.condition, 'Not specified') AS condition,
                 COALESCE(p.sensitivity, 'Not specified') AS sensitivity,
                 COALESCE(p.allergies, ARRAY[]::text[]) AS allergies,
-                EXTRACT(YEAR FROM age(CURRENT_DATE, p."birthDate")) AS age
+                p.age
             FROM users u
             JOIN profiles p ON p."userID" = u.id
             WHERE u.id = $1
@@ -52,7 +52,7 @@ exports.updateProfile = async (req, res) => {
         const {
             firstName,
             lastName,
-            birthDate,
+            age,
             gender,
             skinType,
             condition,
@@ -66,7 +66,7 @@ exports.updateProfile = async (req, res) => {
             SET
                 "firstName" = COALESCE($2, "firstName"),
                 "lastName" = COALESCE($3, "lastName"),
-                "birthDate" = COALESCE($4, "birthDate"),
+                age = COALESCE($4, age),
                 gender = COALESCE($5, gender),
                 "skinType" = COALESCE($6, "skinType"),
                 condition = COALESCE($7, condition),
@@ -79,7 +79,7 @@ exports.updateProfile = async (req, res) => {
                 userID,
                 firstName,
                 lastName,
-                birthDate,
+                age,
                 gender,
                 skinType,
                 condition,

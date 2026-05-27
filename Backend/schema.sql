@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     "userID" uuid NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     "firstName" text NOT NULL,
     "lastName" text NOT NULL,
-    "birthDate" date NOT NULL,
+    age integer NOT NULL CHECK (age BETWEEN 12 AND 120),
     gender text NOT NULL CHECK (gender IN ('male', 'female', 'other')),
     "skinType" text NOT NULL,
     condition text DEFAULT 'Not specified',

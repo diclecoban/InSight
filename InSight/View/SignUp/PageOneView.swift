@@ -66,7 +66,7 @@ struct PageOneView: View {
                             firstName: firstName,
                             lastName: lastName,
                             password: password,
-                            birthDate: appState.registrationDraft.birthDate,
+                            age: appState.registrationDraft.age,
                             gender: appState.registrationDraft.gender,
                             skinType: appState.registrationDraft.skinType,
                             allergies: appState.registrationDraft.allergies

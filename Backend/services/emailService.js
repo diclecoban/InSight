@@ -33,6 +33,11 @@ const createTransporter = () => {
     });
 };
 
+exports.verifyEmailConfiguration = async () => {
+    const transporter = createTransporter();
+    await transporter.verify();
+};
+
 exports.sendVerificationEmail = async (email, verificationCode) => {
     const transporter = createTransporter();
 
