@@ -5,9 +5,11 @@ import SwiftUI
 class BarcodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     var scannedCode: String?
     var isFlashOn = false
+    var errorMessage: String?
     
     let session = AVCaptureSession()
     private var device: AVCaptureDevice?
+    private var didConfigureSession = false
     
     override init() {
         super.init()
@@ -15,13 +17,52 @@ class BarcodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     }
     
     func setupCamera() {
-        guard let device = AVCaptureDevice.default(for: .video),
-              let input = try? AVCaptureDeviceInput(device: device) else { return }
-        
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            configureSession()
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
+                DispatchQueue.main.async {
+                    if granted {
+                        self?.configureSession()
+                        self?.startSession()
+                    } else {
+                        self?.errorMessage = String(localized: "Camera access is required to scan barcodes.")
+                    }
+                }
+            }
+        case .denied, .restricted:
+            errorMessage = String(localized: "Camera access is required to scan barcodes.")
+        @unknown default:
+            errorMessage = String(localized: "Camera access could not be verified.")
+        }
+    }
+
+    private func configureSession() {
+        guard !didConfigureSession else { return }
+        guard let device = AVCaptureDevice.default(for: .video) else {
+            errorMessage = String(localized: "No camera was found on this device.")
+            return
+        }
+
+        guard let input = try? AVCaptureDeviceInput(device: device) else {
+            errorMessage = String(localized: "The camera could not be started.")
+            return
+        }
+
         self.device = device
+
+        guard session.canAddInput(input) else {
+            errorMessage = String(localized: "The camera input could not be added.")
+            return
+        }
         session.addInput(input)
         
         let output = AVCaptureMetadataOutput()
+        guard session.canAddOutput(output) else {
+            errorMessage = String(localized: "The barcode scanner could not be started.")
+            return
+        }
         session.addOutput(output)
         output.setMetadataObjectsDelegate(self, queue: .main)
         
@@ -29,9 +70,12 @@ class BarcodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
         output.metadataObjectTypes = [
             .ean8, .ean13, .qr, .upce, .code128
         ]
+
+        didConfigureSession = true
     }
     
     func startSession() {
+        guard didConfigureSession else { return }
         DispatchQueue.global(qos: .background).async {
             self.session.startRunning()
         }

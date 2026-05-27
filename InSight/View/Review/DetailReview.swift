@@ -18,7 +18,10 @@ struct DetailReview: View {
     }
 
     private var scoreText: String {
-        "Score \(Int(scanResult.score * 100)) / 100"
+        String.localizedStringWithFormat(
+            String(localized: "Score %lld / 100"),
+            Int(scanResult.score * 100)
+        )
     }
 
     var body: some View {
@@ -130,10 +133,13 @@ struct DetailReview: View {
             }
 
         if allergyMatches.isEmpty {
-            return "The score is based on the ingredient risk notes available for this product."
+            return String(localized: "The score is based on the ingredient risk notes available for this product.")
         }
 
-        return "\(allergyMatches.joined(separator: ", ")) appears in your allergy list, so this product may need extra caution."
+        return String.localizedStringWithFormat(
+            String(localized: "%@ appears in your allergy list, so this product may need extra caution."),
+            allergyMatches.joined(separator: ", ")
+        )
     }
 }
 

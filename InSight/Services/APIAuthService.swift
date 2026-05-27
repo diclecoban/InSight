@@ -45,6 +45,19 @@ struct APIAuthService: AuthServicing {
         return response.toDomain()
     }
 
+    func refresh(session: AuthSession) async throws -> AuthSession {
+        let requestBody = try client.encodeBody(RefreshRequest(refreshToken: session.refreshToken))
+        let endpoint = APIEndpoint(
+            path: "/auth/refresh",
+            method: .post,
+            headers: ["Content-Type": "application/json"],
+            body: requestBody
+        )
+
+        let response: AuthResponse = try await client.request(endpoint)
+        return response.toDomain()
+    }
+
     func logout(session: AuthSession) async throws {
         let requestBody = try client.encodeBody(LogoutRequest(
             authToken: session.authToken,
@@ -101,6 +114,10 @@ private struct OTPVerificationRequest: Encodable {
 
 private struct LogoutRequest: Encodable {
     let authToken: String
+    let refreshToken: String
+}
+
+private struct RefreshRequest: Encodable {
     let refreshToken: String
 }
 

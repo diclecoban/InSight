@@ -6,23 +6,30 @@ protocol AuthServicing {
     func register(draft: RegistrationDraft) async throws
     func signIn(email: String, password: String) async throws -> AuthSession
     func verifyOTP(email: String, code: String) async throws -> AuthSession
+    func refresh(session: AuthSession) async throws -> AuthSession
     func logout(session: AuthSession) async throws
 }
 
+protocol SessionPersisting {
+    func loadSession() -> AuthSession?
+    func saveSession(_ session: AuthSession)
+    func clearSession()
+}
+
 protocol ProfileServicing {
-    func fetchUserProfile(userID: UUID) async throws -> UserProfile
-    func updateUserProfile(userID: UUID, draft: ProfileUpdateDraft) async throws -> UserProfile
+    func fetchUserProfile(userID: UUID, authToken: String) async throws -> UserProfile
+    func updateUserProfile(userID: UUID, authToken: String, draft: ProfileUpdateDraft) async throws -> UserProfile
 }
 
 protocol ContentServicing {
-    func fetchSavedReviews(for userID: UUID) async throws -> [SavedReview]
-    func fetchRecommendations(for userID: UUID) async throws -> [RecommendationItem]
-    func saveReview(productID: UUID, status: SafetyLevel, for userID: UUID) async throws
-    func deleteSavedReview(reviewID: UUID, for userID: UUID) async throws
+    func fetchSavedReviews(for userID: UUID, authToken: String) async throws -> [SavedReview]
+    func fetchRecommendations(for userID: UUID, authToken: String) async throws -> [RecommendationItem]
+    func saveReview(productID: UUID, status: SafetyLevel, for userID: UUID, authToken: String) async throws
+    func deleteSavedReview(reviewID: UUID, for userID: UUID, authToken: String) async throws
 }
 
 protocol ScanServicing {
-    func analyzeBarcode(_ barcode: String, for userID: UUID?) async throws -> ScanResult
+    func analyzeBarcode(_ barcode: String, for session: AuthSession?) async throws -> ScanResult
 }
 
 enum AppServiceError: LocalizedError {
@@ -35,15 +42,15 @@ enum AppServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidRegistration:
-            return "Registration details are missing or invalid."
+            return String(localized: "Registration details are missing or invalid.")
         case .invalidCredentials:
-            return "Email or password is incorrect."
+            return String(localized: "Email or password is incorrect.")
         case .invalidOTP:
-            return "The OTP code is invalid."
+            return String(localized: "The OTP code is invalid.")
         case .missingSession:
-            return "No session found."
+            return String(localized: "No session found.")
         case .unsupportedBarcode:
-            return "No result was found for this barcode."
+            return String(localized: "No result was found for this barcode.")
         }
     }
 }
@@ -148,18 +155,33 @@ struct MockAuthService: AuthServicing {
         )
     }
 
+    func refresh(session: AuthSession) async throws -> AuthSession {
+        try await Task.sleep(for: .milliseconds(250))
+        return session
+    }
+
     func logout(session: AuthSession) async throws {
         try await Task.sleep(for: .milliseconds(150))
     }
 }
 
+struct InMemorySessionStore: SessionPersisting {
+    func loadSession() -> AuthSession? {
+        nil
+    }
+
+    func saveSession(_ session: AuthSession) {}
+
+    func clearSession() {}
+}
+
 struct MockProfileService: ProfileServicing {
-    func fetchUserProfile(userID: UUID) async throws -> UserProfile {
+    func fetchUserProfile(userID: UUID, authToken: String) async throws -> UserProfile {
         try await Task.sleep(for: .milliseconds(300))
         return AppMockData.profile
     }
 
-    func updateUserProfile(userID: UUID, draft: ProfileUpdateDraft) async throws -> UserProfile {
+    func updateUserProfile(userID: UUID, authToken: String, draft: ProfileUpdateDraft) async throws -> UserProfile {
         try await Task.sleep(for: .milliseconds(300))
 
         return UserProfile(
@@ -180,27 +202,27 @@ struct MockProfileService: ProfileServicing {
 }
 
 struct MockContentService: ContentServicing {
-    func fetchSavedReviews(for userID: UUID) async throws -> [SavedReview] {
+    func fetchSavedReviews(for userID: UUID, authToken: String) async throws -> [SavedReview] {
         try await Task.sleep(for: .milliseconds(250))
         return AppMockData.savedReviews
     }
 
-    func fetchRecommendations(for userID: UUID) async throws -> [RecommendationItem] {
+    func fetchRecommendations(for userID: UUID, authToken: String) async throws -> [RecommendationItem] {
         try await Task.sleep(for: .milliseconds(250))
         return AppMockData.recommendations
     }
 
-    func saveReview(productID: UUID, status: SafetyLevel, for userID: UUID) async throws {
+    func saveReview(productID: UUID, status: SafetyLevel, for userID: UUID, authToken: String) async throws {
         try await Task.sleep(for: .milliseconds(250))
     }
 
-    func deleteSavedReview(reviewID: UUID, for userID: UUID) async throws {
+    func deleteSavedReview(reviewID: UUID, for userID: UUID, authToken: String) async throws {
         try await Task.sleep(for: .milliseconds(200))
     }
 }
 
 struct MockScanService: ScanServicing {
-    func analyzeBarcode(_ barcode: String, for userID: UUID?) async throws -> ScanResult {
+    func analyzeBarcode(_ barcode: String, for session: AuthSession?) async throws -> ScanResult {
         try await Task.sleep(for: .milliseconds(700))
 
         guard !barcode.isEmpty else {

@@ -37,15 +37,6 @@ struct LoginView: View {
                 }
                 .padding(.horizontal, 24)
 
-                HStack {
-                    Spacer()
-                    Button("Forgot Your Password?") {
-                    }
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Color.white.opacity(0.88))
-                }
-                .padding(.horizontal, 24)
-
                 Button {
                     Task {
                         await appState.signIn(email: email, password: password)
@@ -67,27 +58,6 @@ struct LoginView: View {
                         .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 24)
-                }
-
-                HStack(spacing: 12) {
-                    Rectangle()
-                        .fill(Color.white.opacity(0.4))
-                        .frame(height: 1)
-
-                    Text("Or")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color.white.opacity(0.78))
-
-                    Rectangle()
-                        .fill(Color.white.opacity(0.4))
-                        .frame(height: 1)
-                }
-                .padding(.horizontal, 24)
-
-                HStack(spacing: 14) {
-                    SocialButton(symbol: "envelope.fill")
-                    SocialButton(symbol: "apple.logo")
-                    SocialButton(symbol: "f.cursive")
                 }
 
                 Spacer()
@@ -142,19 +112,6 @@ struct AuthSecureField: View {
             .padding(.vertical, 12)
             .background(Color.white.opacity(0.95))
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
-}
-
-private struct SocialButton: View {
-    let symbol: String
-
-    var body: some View {
-        Image(systemName: symbol)
-            .font(.system(size: 18, weight: .semibold))
-            .foregroundStyle(.black.opacity(0.78))
-            .frame(width: 36, height: 36)
-            .background(Color.white.opacity(0.95))
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
 

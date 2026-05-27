@@ -26,3 +26,14 @@ fastlane/screenshots
 
 # Logs
 *.log
+
+# Node
+node_modules/
+Backend/node_modules/
+
+# Environment
+.env
+Backend/.env
+
+# Test output
+coverage/

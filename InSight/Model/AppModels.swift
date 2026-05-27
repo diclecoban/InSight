@@ -8,7 +8,7 @@
 import Foundation
 import SwiftUI
 
-struct AuthSession: Equatable {
+struct AuthSession: Codable, Equatable {
     let userID: UUID
     let email: String
     let authToken: String
@@ -47,11 +47,11 @@ enum SafetyLevel: String, Equatable, CaseIterable {
     var title: String {
         switch self {
         case .safe:
-            return "Safe!"
+            return String(localized: "Safe!")
         case .mostlySafe:
-            return "Mostly Safe!"
+            return String(localized: "Mostly Safe!")
         case .risky:
-            return "Risky!"
+            return String(localized: "Risky!")
         }
     }
 

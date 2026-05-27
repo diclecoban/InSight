@@ -98,7 +98,11 @@ struct ProfileView: View {
 
                                 HStack(spacing: 12) {
                                     ProfileMetricCard(icon: "drop.fill", title: "Skin Type", value: profile.skinType)
-                                    ProfileMetricCard(icon: "allergens.fill", title: "Reaction", value: profile.allergies.first ?? "None")
+                                    ProfileMetricCard(
+                                        icon: "allergens.fill",
+                                        title: "Reaction",
+                                        value: profile.allergies.first ?? String(localized: "None")
+                                    )
                                 }
                             }
                             .padding(20)
@@ -119,19 +123,6 @@ struct ProfileView: View {
                                         .padding(.vertical, 14)
                                         .background(accentColor)
                                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                }
-
-                                Button {
-                                } label: {
-                                    Text("Health History")
-                                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                        .foregroundStyle(accentColor)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 14)
-                                        .overlay {
-                                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                                .stroke(accentColor.opacity(0.4), lineWidth: 1.5)
-                                        }
                                 }
 
                                 Button {
@@ -282,7 +273,7 @@ private struct EditProfileView: View {
                                 }
                             }
                         } label: {
-                            Text(appState.isLoading ? "Saving..." : "Save Changes")
+                            Text(appState.isLoading ? String(localized: "Saving...") : String(localized: "Save Changes"))
                                 .font(.system(size: 15, weight: .semibold, design: .rounded))
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)

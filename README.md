@@ -18,7 +18,8 @@ safety levels: `safe`, `mostlySafe`, and `risky`.
 | Email delivery | `nodemailer` |
 | Client | iOS app built with Swift and SwiftUI |
 | Client networking | `URLSession` |
-| Local API base URL | `http://192.168.1.135:3000` in the current iOS configuration |
+| Minimum iOS version | iOS 17.0 |
+| Local API base URL | `API_BASE_URL` in `InSight/Info.plist` |
 
 ### Core data flows
 
@@ -64,10 +65,10 @@ Use these headers as the baseline for client-server communication.
 
 ### Protected endpoint policy
 
-The backend currently creates token-backed sessions in the `auth_sessions` table.
-The next security step is to add middleware that validates
-`Authorization: Bearer <authToken>` against `auth_sessions.auth_token_hash` and
-attaches the authenticated user to `req.user`.
+The backend creates token-backed sessions in the `auth_sessions` table and uses
+middleware to validate `Authorization: Bearer <authToken>` against
+`auth_sessions.auth_token_hash`. Protected routes should use the authenticated
+user attached to `req.user`.
 
 Recommended protected endpoints:
 
@@ -113,12 +114,24 @@ The backend runs at `http://localhost:3000` by default.
 
 ### Database setup
 
-Database connection values are read from `Backend/.env`. Use either the `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` values or a single `DATABASE_URL`.
+Database connection values are read from `Backend/.env`. Use either the
+`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` values or a single
+`DATABASE_URL`.
+
+Create a local environment file from the template:
+
+```sh
+cd Backend
+cp .env.example .env
+```
+
+Then fill in the PostgreSQL and SMTP values in `Backend/.env`.
 
 Run migrations before using the backend:
 
 ```sh
 cd Backend
+npm install
 npm run migrate
 ```
 
@@ -129,7 +142,58 @@ cd Backend
 npm run migrate:status
 ```
 
+Verify that all migrations can build a fresh PostgreSQL database from scratch:
+
+```sh
+cd Backend
+npm run migrate:fresh:verify
+```
+
 Add future migrations as ordered SQL files in `Backend/migrations`, for example `002_add_product_flags.sql`.
+
+### Backend startup
+
+Use this sequence for a clean local backend setup:
+
+```sh
+cd Backend
+npm install
+cp .env.example .env
+npm run migrate:status
+npm run migrate
+npm run migrate:fresh:verify
+npm test
+node index.js
+```
+
+If `Backend/.env` already exists, do not overwrite it. Update only the missing
+values.
+
+### iOS setup
+
+Open `InSight.xcodeproj` in Xcode.
+
+- Select the `InSight` target.
+- Set Signing & Capabilities to your Apple Developer Team.
+- Keep the deployment target at iOS 17.0 or newer.
+- Set `API_BASE_URL` in `InSight/Info.plist` to a backend URL reachable from the run destination.
+
+For a simulator talking to a backend on the same Mac, use `http://127.0.0.1:3000`
+or `http://localhost:3000`. For a real iPhone, use the Mac's LAN IP address and
+make sure both devices are on the same network.
+
+### End-to-end smoke test
+
+With the backend running and the iOS app installed on a simulator or real
+device, verify this flow:
+
+1. Register a new account.
+2. Retrieve the OTP from email delivery or backend logs, depending on local setup.
+3. Verify the OTP.
+4. Log in and confirm the session persists after app restart.
+5. Scan or submit a barcode.
+6. Save the returned review.
+7. Reopen saved reviews and confirm the saved item is listed.
 
 ### Email verification setup
 

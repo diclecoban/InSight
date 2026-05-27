@@ -156,7 +156,7 @@ struct PageTwoView: View {
                         await appState.register()
                     }
                 } label: {
-                    Text(appState.isLoading ? "Registering..." : "Register")
+                    Text(appState.isLoading ? String(localized: "Registering...") : String(localized: "Register"))
                         .font(.system(size: 16, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)

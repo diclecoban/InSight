@@ -7,18 +7,21 @@ struct APIProfileService: ProfileServicing {
         self.client = client
     }
 
-    func fetchUserProfile(userID: UUID) async throws -> UserProfile {
-        let endpoint = APIEndpoint(path: "/profiles/\(userID.uuidString)")
+    func fetchUserProfile(userID: UUID, authToken: String) async throws -> UserProfile {
+        let endpoint = APIEndpoint(
+            path: "/profiles/\(userID.uuidString)",
+            headers: APIHeaders.authorized(authToken)
+        )
         let response: UserProfileResponse = try await client.request(endpoint)
         return response.toDomain()
     }
 
-    func updateUserProfile(userID: UUID, draft: ProfileUpdateDraft) async throws -> UserProfile {
+    func updateUserProfile(userID: UUID, authToken: String, draft: ProfileUpdateDraft) async throws -> UserProfile {
         let requestBody = try client.encodeBody(ProfileUpdateRequest(draft: draft))
         let endpoint = APIEndpoint(
             path: "/profiles/\(userID.uuidString)",
             method: .patch,
-            headers: ["Content-Type": "application/json"],
+            headers: APIHeaders.jsonAuthorized(authToken),
             body: requestBody
         )
 
@@ -34,19 +37,25 @@ struct APIContentService: ContentServicing {
         self.client = client
     }
 
-    func fetchSavedReviews(for userID: UUID) async throws -> [SavedReview] {
-        let endpoint = APIEndpoint(path: "/content/\(userID.uuidString)/saved-reviews")
+    func fetchSavedReviews(for userID: UUID, authToken: String) async throws -> [SavedReview] {
+        let endpoint = APIEndpoint(
+            path: "/content/\(userID.uuidString)/saved-reviews",
+            headers: APIHeaders.authorized(authToken)
+        )
         let response: [SavedReviewResponse] = try await client.request(endpoint)
         return response.map { $0.toDomain() }
     }
 
-    func fetchRecommendations(for userID: UUID) async throws -> [RecommendationItem] {
-        let endpoint = APIEndpoint(path: "/content/\(userID.uuidString)/recommendations")
+    func fetchRecommendations(for userID: UUID, authToken: String) async throws -> [RecommendationItem] {
+        let endpoint = APIEndpoint(
+            path: "/content/\(userID.uuidString)/recommendations",
+            headers: APIHeaders.authorized(authToken)
+        )
         let response: [RecommendationResponse] = try await client.request(endpoint)
         return response.map { $0.toDomain() }
     }
 
-    func saveReview(productID: UUID, status: SafetyLevel, for userID: UUID) async throws {
+    func saveReview(productID: UUID, status: SafetyLevel, for userID: UUID, authToken: String) async throws {
         let requestBody = try client.encodeBody(SaveReviewRequest(
             productID: productID,
             status: status.rawValue
@@ -54,17 +63,18 @@ struct APIContentService: ContentServicing {
         let endpoint = APIEndpoint(
             path: "/content/\(userID.uuidString)/saved-reviews",
             method: .post,
-            headers: ["Content-Type": "application/json"],
+            headers: APIHeaders.jsonAuthorized(authToken),
             body: requestBody
         )
 
         try await client.request(endpoint)
     }
 
-    func deleteSavedReview(reviewID: UUID, for userID: UUID) async throws {
+    func deleteSavedReview(reviewID: UUID, for userID: UUID, authToken: String) async throws {
         let endpoint = APIEndpoint(
             path: "/content/\(userID.uuidString)/saved-reviews/\(reviewID.uuidString)",
-            method: .delete
+            method: .delete,
+            headers: APIHeaders.authorized(authToken)
         )
 
         try await client.request(endpoint)
@@ -78,17 +88,51 @@ struct APIScanService: ScanServicing {
         self.client = client
     }
 
-    func analyzeBarcode(_ barcode: String, for userID: UUID?) async throws -> ScanResult {
-        let requestBody = try client.encodeBody(ScanRequest(barcode: barcode, userID: userID))
+    func analyzeBarcode(_ barcode: String, for session: AuthSession?) async throws -> ScanResult {
+        let requestBody = try client.encodeBody(ScanRequest(
+            barcode: barcode,
+            userID: session?.userID
+        ))
         let endpoint = APIEndpoint(
             path: "/scan/analyze",
             method: .post,
-            headers: ["Content-Type": "application/json"],
+            headers: APIHeaders.scan(session?.authToken),
             body: requestBody
         )
 
         let response: ScanResultResponse = try await client.request(endpoint)
         return response.toDomain()
+    }
+}
+
+private enum APIHeaders {
+    static func authorized(_ token: String) -> [String: String] {
+        [
+            "Authorization": "Bearer \(token)",
+            "X-Client-Platform": "ios",
+            "X-Client-Version": NetworkConfiguration.clientVersion,
+            "Accept-Language": Locale.preferredLanguages.first ?? "en"
+        ]
+    }
+
+    static func jsonAuthorized(_ token: String) -> [String: String] {
+        authorized(token).merging(["Content-Type": "application/json"]) { _, new in new }
+    }
+
+    static func scan(_ token: String?) -> [String: String] {
+        var headers = [
+            "Content-Type": "application/json",
+            "X-Client-Platform": "ios",
+            "X-Client-Version": NetworkConfiguration.clientVersion,
+            "X-Scan-Source": "barcode",
+            "Accept-Language": Locale.preferredLanguages.first ?? "en"
+        ]
+
+        if let token {
+            headers["Authorization"] = "Bearer \(token)"
+        }
+
+        return headers
     }
 }
 

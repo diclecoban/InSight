@@ -6,7 +6,6 @@ struct ScanView: View {
     @State private var scanner = BarcodeScanner()
     @State private var scannedCode: String = ""
     @State private var showResult = false
-    @State private var isFlashOn = false
     @State private var goToResult = false
 
     var body: some View {
@@ -20,18 +19,6 @@ struct ScanView: View {
 
             VStack {
                 HStack {
-                    Button {
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(.white)
-                            .frame(width: 36, height: 36)
-                            .background(Color.black.opacity(0.35))
-                            .clipShape(Circle())
-                    }
-
-                    Spacer()
-
                     VStack(spacing: 3) {
                         Text("Scan a barcode")
                             .font(.system(size: 18, weight: .bold, design: .rounded))
@@ -41,11 +28,7 @@ struct ScanView: View {
                             .font(.system(size: 12, weight: .medium, design: .rounded))
                             .foregroundStyle(.white.opacity(0.78))
                     }
-
-                    Spacer()
-
-                    Color.clear
-                        .frame(width: 36, height: 36)
+                    .frame(maxWidth: .infinity)
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 14)
@@ -75,28 +58,31 @@ struct ScanView: View {
 
                 Spacer()
 
+                if let errorMessage = scanner.errorMessage {
+                    Text(errorMessage)
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(Color.black.opacity(0.45))
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .padding(.horizontal, 24)
+                }
+
+                if let errorMessage = appState.errorMessage {
+                    Text(errorMessage)
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(Color(red: 0.925, green: 0.302, blue: 0.302).opacity(0.82))
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .padding(.horizontal, 24)
+                }
+
                 HStack {
-                    ActionIcon(symbol: "photo.on.rectangle.angled")
-
-                    Spacer()
-
-                    Button {
-                    } label: {
-                        ZStack {
-                            Circle()
-                                .fill(Color.white.opacity(0.15))
-                                .frame(width: 82, height: 82)
-
-                            Circle()
-                                .stroke(Color.white, lineWidth: 4)
-                                .frame(width: 68, height: 68)
-
-                            Circle()
-                                .fill(Color.white)
-                                .frame(width: 56, height: 56)
-                        }
-                    }
-
                     Spacer()
 
                     Button {

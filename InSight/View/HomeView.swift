@@ -80,8 +80,8 @@ struct HomeView: View {
                         .multilineTextAlignment(.center)
 
                         HStack(spacing: 12) {
-                            CategoryCard(icon: "bag.fill", title: "Skin Care")
-                            CategoryCard(icon: "heart.fill", title: "Food")
+                            CategoryCard(icon: "bag.fill", title: String(localized: "Skin Care"))
+                            CategoryCard(icon: "heart.fill", title: String(localized: "Food"))
                         }
                         .padding(.horizontal, 24)
                         
@@ -92,8 +92,8 @@ struct HomeView: View {
 
                             if appState.recommendations.isEmpty {
                                 RecommendationCard(
-                                    title: "No recommendations yet",
-                                    subtitle: "Scan a product to personalize this area."
+                                    title: String(localized: "No recommendations yet"),
+                                    subtitle: String(localized: "Scan a product to personalize this area.")
                                 )
                             } else {
                                 ForEach(appState.recommendations) { recommendation in
@@ -166,9 +166,9 @@ struct RecommendationCard: View {
 var greeting: String {
     let hour = Calendar.current.component(.hour, from: Date())
     switch hour {
-    case 6..<12:  return "Good Morning"
-    case 12..<18: return "Good Afternoon"
-    default:      return "Good Evening"
+    case 6..<12:  return String(localized: "Good Morning")
+    case 12..<18: return String(localized: "Good Afternoon")
+    default:      return String(localized: "Good Evening")
     }
 }
 

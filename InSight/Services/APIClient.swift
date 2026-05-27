@@ -4,15 +4,43 @@ enum APIClientError: LocalizedError {
     case invalidURL
     case invalidResponse
     case requestFailed(statusCode: Int, message: String)
+    case decodingFailed(String)
 
     var errorDescription: String? {
         switch self {
         case .invalidURL:
-            return "Invalid URL."
+            return String(localized: "We could not reach the server.")
         case .invalidResponse:
-            return "The server returned an invalid response."
+            return String(localized: "The server response was not valid.")
         case let .requestFailed(statusCode, message):
-            return "Request failed (\(statusCode)): \(message)"
+            return Self.userMessage(statusCode: statusCode, message: message)
+        case let .decodingFailed(message):
+            return message
+        }
+    }
+
+    var isUnauthorized: Bool {
+        if case let .requestFailed(statusCode, _) = self {
+            return statusCode == 401
+        }
+
+        return false
+    }
+
+    private static func userMessage(statusCode: Int, message: String) -> String {
+        switch statusCode {
+        case 400:
+            return message
+        case 401:
+            return String(localized: "Your session has expired. Please log in again.")
+        case 403:
+            return message
+        case 404:
+            return message
+        case 500...599:
+            return String(localized: "The server is having trouble right now. Please try again shortly.")
+        default:
+            return message.isEmpty ? String(localized: "Something went wrong. Please try again.") : message
         }
     }
 }
@@ -40,7 +68,11 @@ struct APIClient {
         let (data, response) = try await session.data(for: request)
 
         try validate(response: response, data: data)
-        return try decoder.decode(Response.self, from: data)
+        do {
+            return try decoder.decode(Response.self, from: data)
+        } catch {
+            throw APIClientError.decodingFailed(String(localized: "The server response could not be read."))
+        }
     }
 
     func request(_ endpoint: APIEndpoint) async throws {
@@ -86,9 +118,29 @@ struct APIClient {
         }
 
         guard 200..<300 ~= httpResponse.statusCode else {
-            let message = String(data: data, encoding: .utf8) ?? "Unknown server error"
+            let message = errorMessage(from: data) ?? "Unknown server error"
             throw APIClientError.requestFailed(statusCode: httpResponse.statusCode, message: message)
         }
+    }
+
+    private func errorMessage(from data: Data) -> String? {
+        guard !data.isEmpty else { return nil }
+
+        if
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let error = object["error"] as? String
+        {
+            if
+                let details = object["details"] as? [[String: Any]],
+                let firstMessage = details.compactMap({ $0["message"] as? String }).first
+            {
+                return firstMessage
+            }
+
+            return error
+        }
+
+        return String(data: data, encoding: .utf8)
     }
 
     private func makeURLRequest(for endpoint: APIEndpoint) throws -> URLRequest {

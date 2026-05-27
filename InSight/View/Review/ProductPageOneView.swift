@@ -90,7 +90,7 @@ struct ProductPageOneView: View {
                                     Image(systemName: appState.isLatestScanSaved ? "bookmark.fill" : "bookmark")
                                         .font(.system(size: 15, weight: .bold))
 
-                                    Text(appState.isLatestScanSaved ? "Saved to Reviews" : "Save Review")
+                                    Text(appState.isLatestScanSaved ? String(localized: "Saved to Reviews") : String(localized: "Save Review"))
                                         .font(.system(size: 16, weight: .semibold, design: .rounded))
                                 }
                                 .foregroundStyle(appState.isLatestScanSaved ? accentColor : .white)
