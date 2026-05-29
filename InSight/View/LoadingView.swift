@@ -8,10 +8,21 @@
 import SwiftUI
 
 struct LoadingView: View {
+    let title: LocalizedStringKey
+    let subtitle: LocalizedStringKey
+
     @State private var animateRing = false
 
     private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
     private let ringColor = Color(red: 0.507, green: 0.514, blue: 0.922)
+
+    init(
+        title: LocalizedStringKey = "Please wait",
+        subtitle: LocalizedStringKey = "We're working hard\nfor you to have perfect\nresults!"
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+    }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -21,13 +32,15 @@ struct LoadingView: View {
             VStack(spacing: 0) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(greeting)
+                        Text("InSight")
                             .font(.system(size: 24, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
 
-                        Text("Susan Clay")
+                        Text("Checking your workspace")
                             .font(.system(size: 13, weight: .medium, design: .rounded))
                             .foregroundStyle(.white.opacity(0.82))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
 
                     Spacer()
@@ -47,9 +60,12 @@ struct LoadingView: View {
                         .ignoresSafeArea(edges: .bottom)
 
                     VStack(spacing: 22) {
-                        Text("Please wait")
+                        Text(title)
                             .font(.system(size: 22, weight: .bold, design: .rounded))
                             .foregroundStyle(Color.black.opacity(0.8))
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.82)
 
                         ZStack {
                             Circle()
@@ -70,11 +86,13 @@ struct LoadingView: View {
                                 .animation(.linear(duration: 1.2).repeatForever(autoreverses: false), value: animateRing)
                         }
 
-                        Text("We're working hard\nfor you to have perfect\nresults!")
+                        Text(subtitle)
                             .font(.system(size: 15, weight: .medium, design: .rounded))
                             .multilineTextAlignment(.center)
                             .foregroundStyle(Color.black.opacity(0.62))
                             .lineSpacing(3)
+                            .lineLimit(4)
+                            .minimumScaleFactor(0.82)
                     }
                     .padding(.bottom, 100)
                 }

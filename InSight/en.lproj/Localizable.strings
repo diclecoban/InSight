@@ -73,12 +73,17 @@
 "Barcode Scanned" = "Barcode Scanned";
 "OK" = "OK";
 "Please wait" = "Please wait";
+"Restoring session" = "Restoring session";
+"Checking your secure session before opening the app." = "Checking your secure session before opening the app.";
+"Checking your workspace" = "Checking your workspace";
 "We're working hard\nfor you to have perfect\nresults!" = "We're working hard\nfor you to have perfect\nresults!";
 "Registration details are missing or invalid." = "Registration details are missing or invalid.";
 "Email or password is incorrect." = "Email or password is incorrect.";
 "The OTP code is invalid." = "The OTP code is invalid.";
 "No session found." = "No session found.";
 "No result was found for this barcode." = "No result was found for this barcode.";
+"Backend is not reachable right now." = "Backend is not reachable right now.";
+"Backend is not reachable. Check your connection or API base URL." = "Backend is not reachable. Check your connection or API base URL.";
 "We could not reach the server." = "We could not reach the server.";
 "The server response was not valid." = "The server response was not valid.";
 "Your session has expired. Please log in again." = "Your session has expired. Please log in again.";

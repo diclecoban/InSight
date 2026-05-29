@@ -73,12 +73,17 @@
 "Barcode Scanned" = "Barkod Tarandı";
 "OK" = "Tamam";
 "Please wait" = "Lütfen bekle";
+"Restoring session" = "Oturum geri yükleniyor";
+"Checking your secure session before opening the app." = "Uygulama açılmadan önce güvenli oturumun kontrol ediliyor.";
+"Checking your workspace" = "Çalışma alanın kontrol ediliyor";
 "We're working hard\nfor you to have perfect\nresults!" = "Mükemmel sonuçlar alman için\nçalışıyoruz!";
 "Registration details are missing or invalid." = "Kayıt bilgileri eksik veya geçersiz.";
 "Email or password is incorrect." = "E-posta veya şifre hatalı.";
 "The OTP code is invalid." = "OTP kodu geçersiz.";
 "No session found." = "Oturum bulunamadı.";
 "No result was found for this barcode." = "Bu barkod için sonuç bulunamadı.";
+"Backend is not reachable right now." = "Backend'e şu anda ulaşılamıyor.";
+"Backend is not reachable. Check your connection or API base URL." = "Backend'e ulaşılamıyor. Bağlantını veya API base URL değerini kontrol et.";
 "We could not reach the server." = "Sunucuya ulaşılamadı.";
 "The server response was not valid." = "Sunucu yanıtı geçerli değil.";
 "Your session has expired. Please log in again." = "Oturumun sona erdi. Lütfen tekrar giriş yap.";

@@ -16,6 +16,7 @@ struct InSightApp: App {
         let profileService: ProfileServicing
         let contentService: ContentServicing
         let scanService: ScanServicing
+        let healthService: HealthServicing
         let sessionStore: SessionPersisting
         let initialSession: AuthSession?
         let initialProfile: UserProfile?
@@ -28,6 +29,7 @@ struct InSightApp: App {
             profileService = MockProfileService()
             contentService = MockContentService()
             scanService = MockScanService()
+            healthService = MockHealthService()
             sessionStore = InMemorySessionStore()
             initialSession = nil
             initialProfile = AppMockData.profile
@@ -40,6 +42,7 @@ struct InSightApp: App {
             profileService = APIProfileService(client: client)
             contentService = APIContentService(client: client)
             scanService = APIScanService(client: client)
+            healthService = APIHealthService(client: client)
             sessionStore = KeychainSessionStore()
             initialSession = sessionStore.loadSession()
             initialProfile = nil
@@ -54,6 +57,7 @@ struct InSightApp: App {
                 profileService: profileService,
                 contentService: contentService,
                 scanService: scanService,
+                healthService: healthService,
                 sessionStore: sessionStore,
                 session: initialSession,
                 userProfile: initialProfile,
@@ -69,7 +73,7 @@ struct InSightApp: App {
             ContentView()
                 .environment(appState)
                 .task {
-                    await appState.restoreSession()
+                    await appState.bootstrap()
                 }
         }
     }

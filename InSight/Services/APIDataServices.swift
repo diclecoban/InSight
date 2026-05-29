@@ -105,6 +105,31 @@ struct APIScanService: ScanServicing {
     }
 }
 
+struct APIHealthService: HealthServicing {
+    private let client: APIClient
+
+    init(client: APIClient) {
+        self.client = client
+    }
+
+    func checkHealth() async throws {
+        let endpoint = APIEndpoint(
+            path: "/health",
+            headers: [
+                "Accept": "application/json",
+                "X-Client-Platform": "ios",
+                "X-Client-Version": NetworkConfiguration.clientVersion,
+                "Accept-Language": Locale.preferredLanguages.first ?? "en"
+            ]
+        )
+        let response: HealthResponse = try await client.request(endpoint)
+
+        guard response.status == "ok" else {
+            throw AppServiceError.backendUnavailable
+        }
+    }
+}
+
 private enum APIHeaders {
     static func authorized(_ token: String) -> [String: String] {
         [
@@ -134,6 +159,10 @@ private enum APIHeaders {
 
         return headers
     }
+}
+
+private struct HealthResponse: Decodable {
+    let status: String
 }
 
 private struct UserProfileResponse: Decodable {

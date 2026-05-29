@@ -32,12 +32,17 @@ protocol ScanServicing {
     func analyzeBarcode(_ barcode: String, for session: AuthSession?) async throws -> ScanResult
 }
 
+protocol HealthServicing {
+    func checkHealth() async throws
+}
+
 enum AppServiceError: LocalizedError {
     case invalidRegistration
     case invalidCredentials
     case invalidOTP
     case missingSession
     case unsupportedBarcode
+    case backendUnavailable
 
     var errorDescription: String? {
         switch self {
@@ -51,6 +56,8 @@ enum AppServiceError: LocalizedError {
             return String(localized: "No session found.")
         case .unsupportedBarcode:
             return String(localized: "No result was found for this barcode.")
+        case .backendUnavailable:
+            return String(localized: "Backend is not reachable right now.")
         }
     }
 }
@@ -239,5 +246,11 @@ struct MockScanService: ScanServicing {
         )
         result.scannedAt = .now
         return result
+    }
+}
+
+struct MockHealthService: HealthServicing {
+    func checkHealth() async throws {
+        try await Task.sleep(for: .milliseconds(150))
     }
 }

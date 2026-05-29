@@ -176,7 +176,7 @@ Open `InSight.xcodeproj` in Xcode.
 - Select the `InSight` target.
 - Set Signing & Capabilities to your Apple Developer Team.
 - Keep the deployment target at iOS 17.0 or newer.
-- Set `API_BASE_URL` in `InSight/Info.plist` to a backend URL reachable from the run destination.
+- Set `API_BASE_URL` from the target build settings. Debug defaults to `http://127.0.0.1:3000`; Release uses the production API URL.
 
 For a simulator talking to a backend on the same Mac, use `http://127.0.0.1:3000`
 or `http://localhost:3000`. For a real iPhone, use the Mac's LAN IP address and

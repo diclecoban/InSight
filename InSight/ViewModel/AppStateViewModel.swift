@@ -1,6 +1,20 @@
 import Foundation
 import Observation
 
+enum SessionRestoreState: Equatable {
+    case pending
+    case restoring
+    case finished
+    case failed
+}
+
+enum BackendConnectionState: Equatable {
+    case unchecked
+    case checking
+    case reachable
+    case unavailable(String)
+}
+
 @Observable
 final class AppStateViewModel {
     private let authService: AuthServicing
@@ -8,6 +22,7 @@ final class AppStateViewModel {
     private let contentService: ContentServicing
     private let scanService: ScanServicing
     private let sessionStore: SessionPersisting
+    private let healthService: HealthServicing
 
     var session: AuthSession?
     var userProfile: UserProfile?
@@ -19,12 +34,15 @@ final class AppStateViewModel {
     var didRestoreSession = false
     var isLoading = false
     var errorMessage: String?
+    var sessionRestoreState: SessionRestoreState
+    var backendConnectionState: BackendConnectionState = .unchecked
 
     init(
         authService: AuthServicing = MockAuthService(),
         profileService: ProfileServicing = MockProfileService(),
         contentService: ContentServicing = MockContentService(),
         scanService: ScanServicing = MockScanService(),
+        healthService: HealthServicing = MockHealthService(),
         sessionStore: SessionPersisting = InMemorySessionStore(),
         session: AuthSession? = nil,
         userProfile: UserProfile? = nil,
@@ -36,12 +54,14 @@ final class AppStateViewModel {
         self.profileService = profileService
         self.contentService = contentService
         self.scanService = scanService
+        self.healthService = healthService
         self.sessionStore = sessionStore
         self.session = session
         self.userProfile = userProfile
         self.savedReviews = savedReviews
         self.recommendations = recommendations
         self.latestScanResult = latestScanResult
+        self.sessionRestoreState = session == nil ? .finished : .pending
     }
 
     var isLoggedIn: Bool {
@@ -60,6 +80,36 @@ final class AppStateViewModel {
         guard let latestScanResult else { return false }
         return savedReviews.contains { review in
             review.productName == latestScanResult.product.name
+        }
+    }
+
+    var isRestoringSession: Bool {
+        sessionRestoreState == .pending || sessionRestoreState == .restoring
+    }
+
+    var backendConnectivityMessage: String? {
+        if case let .unavailable(message) = backendConnectionState {
+            return message
+        }
+
+        return nil
+    }
+
+    func bootstrap() async {
+        await restoreSession()
+        await checkBackendConnectivity()
+    }
+
+    func checkBackendConnectivity() async {
+        backendConnectionState = .checking
+
+        do {
+            try await healthService.checkHealth()
+            backendConnectionState = .reachable
+        } catch {
+            backendConnectionState = .unavailable(
+                String(localized: "Backend is not reachable. Check your connection or API base URL.")
+            )
         }
     }
 
@@ -161,6 +211,7 @@ final class AppStateViewModel {
         recommendations = []
         latestScanResult = nil
         errorMessage = nil
+        sessionRestoreState = .finished
         sessionStore.clearSession()
 
         if let sessionToLogout {
@@ -179,11 +230,40 @@ final class AppStateViewModel {
         guard !didRestoreSession else { return }
         didRestoreSession = true
 
-        guard let storedSession = sessionStore.loadSession() else { return }
+        guard let storedSession = session ?? sessionStore.loadSession() else {
+            sessionRestoreState = .finished
+            return
+        }
+
+        sessionRestoreState = .restoring
         session = storedSession
 
-        await performAuthenticatedRequest { session in
-            try await loadAuthenticatedContent(for: session)
+        do {
+            try await loadAuthenticatedContent(for: storedSession)
+            sessionRestoreState = .finished
+        } catch {
+            if isUnauthorized(error) {
+                do {
+                    let refreshedSession = try await authService.refresh(session: storedSession)
+                    session = refreshedSession
+                    sessionStore.saveSession(refreshedSession)
+                    try await loadAuthenticatedContent(for: refreshedSession)
+                    sessionRestoreState = .finished
+                    return
+                } catch {
+                    if isUnauthorized(error) {
+                        sessionStore.clearSession()
+                        session = nil
+                    }
+                }
+            }
+
+            userProfile = nil
+            savedReviews = []
+            recommendations = []
+            latestScanResult = nil
+            sessionRestoreState = .failed
+            errorMessage = error.localizedDescription
         }
     }
 
