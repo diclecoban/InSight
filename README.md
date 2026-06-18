@@ -112,6 +112,28 @@ The backend runs at `http://localhost:3000` by default.
 - `POST /scan/analyze`
   - Body: `{ "barcode": "8691234567890", "userID": "optional-user-id" }`
 
+### Open Beauty Facts integration
+
+When a scanned barcode is not already present in the local `products` table, the
+backend attempts to resolve it from Open Beauty Facts and stores the returned
+product name, brand, and ingredient list locally before calculating the scan
+score. Existing local products are reused, so repeated scans do not call the
+external API again.
+
+Configure the Open Beauty Facts client in `Backend/.env`:
+
+```env
+OPEN_BEAUTY_FACTS_BASE_URL=https://world.openbeautyfacts.org
+OPEN_BEAUTY_FACTS_TIMEOUT_MS=5000
+OPEN_BEAUTY_FACTS_USER_AGENT="InSight/1.0 (your-email@example.com)"
+```
+
+Use a real contact email in `OPEN_BEAUTY_FACTS_USER_AGENT`. Open Food Facts API
+guidance asks API clients to identify their application with a custom
+User-Agent, and the product read API is rate-limited. Open Beauty Facts data is
+open data, but attribution and license obligations still apply when publishing
+or redistributing derived product data.
+
 ### Database setup
 
 Database connection values are read from `Backend/.env`. Use either the

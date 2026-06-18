@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { fetchProductByBarcode } = require('../services/openBeautyFactsService');
 
 const SCAN_SOURCES = new Set(['barcode', 'ocr', 'manual', 'photo']);
 const SUPPORTED_LOCALES = new Set(['en', 'tr']);
@@ -99,52 +100,10 @@ const mapScanResult = (scan, product, ingredients, score, locale) => {
     };
 };
 
-const findOrCreateProduct = async (client, barcode) => {
-    const existing = await client.query(
-        'SELECT id, name, brand, "priceText", barcode FROM products WHERE barcode = $1',
-        [barcode]
-    );
-
-    if (existing.rows.length > 0) {
-        return existing.rows[0];
-    }
-
-    const created = await client.query(
-        `
-        INSERT INTO products (name, brand, "priceText", barcode)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id, name, brand, "priceText", barcode
-        `,
-        ['Scanned Product', 'InSight Demo', '$19.99', barcode]
-    );
-
-    return created.rows[0];
-};
-
-const getProductIngredients = async (client, productID) => {
-    const result = await client.query(
-        `
-        SELECT
-            i.id,
-            i.name,
-            i.detail,
-            i."riskNote",
-            i."riskLevel"
-        FROM product_ingredients pi
-        JOIN ingredients i ON i.id = pi."ingredientID"
-        WHERE pi."productID" = $1
-        ORDER BY pi.position ASC
-        `,
-        [productID]
-    );
-
-    if (result.rows.length > 0) {
-        return result.rows;
-    }
-
+const insertProductIngredients = async (client, productID, ingredients) => {
     const inserted = [];
 
-    for (const [index, ingredient] of fallbackIngredients.entries()) {
+    for (const [index, ingredient] of ingredients.entries()) {
         const ingredientResult = await client.query(
             `
             INSERT INTO ingredients (name, detail, "riskNote", "riskLevel")
@@ -173,6 +132,63 @@ const getProductIngredients = async (client, productID) => {
     }
 
     return inserted;
+};
+
+const findOrCreateProduct = async (client, barcode) => {
+    const existing = await client.query(
+        'SELECT id, name, brand, "priceText", barcode FROM products WHERE barcode = $1',
+        [barcode]
+    );
+
+    if (existing.rows.length > 0) {
+        return existing.rows[0];
+    }
+
+    const openBeautyFactsProduct = await fetchProductByBarcode(barcode);
+    const productData = openBeautyFactsProduct || {
+        name: 'Scanned Product',
+        brand: 'InSight Demo',
+        priceText: '$19.99',
+        barcode,
+        ingredients: fallbackIngredients
+    };
+
+    const created = await client.query(
+        `
+        INSERT INTO products (name, brand, "priceText", barcode)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id, name, brand, "priceText", barcode
+        `,
+        [productData.name, productData.brand, productData.priceText, productData.barcode]
+    );
+
+    await insertProductIngredients(client, created.rows[0].id, productData.ingredients);
+
+    return created.rows[0];
+};
+
+const getProductIngredients = async (client, productID) => {
+    const result = await client.query(
+        `
+        SELECT
+            i.id,
+            i.name,
+            i.detail,
+            i."riskNote",
+            i."riskLevel"
+        FROM product_ingredients pi
+        JOIN ingredients i ON i.id = pi."ingredientID"
+        WHERE pi."productID" = $1
+        ORDER BY pi.position ASC
+        `,
+        [productID]
+    );
+
+    if (result.rows.length > 0) {
+        return result.rows;
+    }
+
+    return insertProductIngredients(client, productID, fallbackIngredients);
 };
 
 exports.analyzeBarcode = async (req, res) => {

@@ -7,6 +7,7 @@ const {
 } = require('./controllerTestUtils');
 
 const scanControllerPath = '../controllers/scanController';
+const openBeautyFactsServicePath = '../services/openBeautyFactsService';
 
 test('analyzeBarcode returns a personalized scan result for an existing product', async () => {
     const scannedAt = new Date('2026-05-27T12:00:00.000Z');
@@ -106,4 +107,87 @@ test('analyzeBarcode validates barcode input before writing scan data', async ()
     assert.equal(res.statusCode, 400);
     assert.deepEqual(res.body, { error: 'barcode is required.' });
     assert.equal(didQuery, false);
+});
+
+test('analyzeBarcode imports a missing barcode from Open Beauty Facts', async () => {
+    const scannedAt = new Date('2026-05-27T12:00:00.000Z');
+    const product = {
+        id: '99999999-9999-4999-8999-999999999999',
+        name: 'Gentle Face Cream',
+        brand: 'Demo Brand',
+        priceText: '',
+        barcode: '3560070791460'
+    };
+    const ingredients = [
+        {
+            id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            name: 'Aqua',
+            detail: 'Ingredient listed by Open Beauty Facts.',
+            riskNote: 'Risk classification is pending regulatory enrichment.',
+            riskLevel: 'low'
+        },
+        {
+            id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+            name: 'Glycerin',
+            detail: 'Ingredient listed by Open Beauty Facts.',
+            riskNote: 'Risk classification is pending regulatory enrichment.',
+            riskLevel: 'low'
+        }
+    ];
+    const client = {
+        query: createQueryQueue([
+            { rows: [] },
+            { rows: [] },
+            { rows: [product] },
+            { rows: [ingredients[0]] },
+            { rows: [] },
+            { rows: [ingredients[1]] },
+            { rows: [] },
+            { rows: ingredients },
+            {
+                rows: [{
+                    id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+                    source: 'barcode',
+                    scannedAt
+                }]
+            },
+            { rows: [] }
+        ]),
+        release() {}
+    };
+    const pool = {
+        connect: async () => client
+    };
+    const scanController = loadControllerWithPool(scanControllerPath, pool, {
+        [openBeautyFactsServicePath]: {
+            fetchProductByBarcode: async () => ({
+                name: product.name,
+                brand: product.brand,
+                priceText: product.priceText,
+                barcode: product.barcode,
+                ingredients
+            })
+        }
+    });
+    const req = {
+        headers: {
+            'x-scan-source': 'barcode',
+            'accept-language': 'en-US'
+        },
+        body: {
+            barcode: product.barcode
+        }
+    };
+    const res = createResponse();
+
+    await scanController.analyzeBarcode(req, res);
+
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.product.name, 'Gentle Face Cream');
+    assert.equal(res.body.product.brand, 'Demo Brand');
+    assert.equal(res.body.safetyLevel, 'safe');
+    assert.deepEqual(
+        res.body.ingredients.map((ingredient) => ingredient.name),
+        ['Aqua', 'Glycerin']
+    );
 });
