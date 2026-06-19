@@ -14,6 +14,7 @@ const profileRow = {
     lastName: 'Coban',
     email: 'dicle@example.com',
     age: 30,
+    gender: 'female',
     skinType: 'Dry',
     condition: null,
     sensitivity: 'High',
@@ -28,8 +29,11 @@ test('getProfile returns mapped profile data', async () => {
     };
     const profileController = loadControllerWithPool(profileControllerPath, pool);
     const req = {
+        user: {
+            id: profileRow.id
+        },
         params: {
-            userID: profileRow.id
+            userID: 'stale-client-user-id'
         }
     };
     const res = createResponse();
@@ -43,6 +47,7 @@ test('getProfile returns mapped profile data', async () => {
         lastName: 'Coban',
         email: 'dicle@example.com',
         age: 30,
+        gender: 'female',
         skinType: 'Dry',
         condition: 'Not specified',
         sensitivity: 'High',
@@ -58,8 +63,11 @@ test('getProfile returns 404 when profile is missing', async () => {
     };
     const profileController = loadControllerWithPool(profileControllerPath, pool);
     const req = {
+        user: {
+            id: 'missing-user'
+        },
         params: {
-            userID: 'missing-user'
+            userID: 'stale-client-user-id'
         }
     };
     const res = createResponse();
@@ -79,8 +87,11 @@ test('updateProfile updates editable fields and returns the refreshed profile', 
     };
     const profileController = loadControllerWithPool(profileControllerPath, pool);
     const req = {
+        user: {
+            id: profileRow.id
+        },
         params: {
-            userID: profileRow.id
+            userID: 'stale-client-user-id'
         },
         body: {
             firstName: 'Dicle',

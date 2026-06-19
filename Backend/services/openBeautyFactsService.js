@@ -15,6 +15,54 @@ const cleanIngredientName = (value) => cleanText(value)
     .replace(/\s+/g, ' ')
     .trim();
 
+const ingredientRiskRules = [
+    {
+        level: 'high',
+        patterns: [/fragrance/i, /parfum/i, /perfume/i, /methylisothiazolinone/i, /methylchloroisothiazolinone/i],
+        detail: 'A common cosmetic sensitizer group.',
+        riskNote: 'Can trigger irritation or allergic reactions, especially on sensitive skin.'
+    },
+    {
+        level: 'medium',
+        patterns: [/alcohol denat/i, /^alcohol$/i, /ethanol/i, /sodium lauryl sulfate/i, /\bsls\b/i],
+        detail: 'A functional ingredient that may be drying or irritating for some users.',
+        riskNote: 'May be irritating for dry, sensitive, or barrier-damaged skin.'
+    },
+    {
+        level: 'medium',
+        patterns: [/methylparaben/i, /propylparaben/i, /butylparaben/i, /ethylparaben/i, /paraben/i],
+        detail: 'A preservative group used to reduce microbial growth.',
+        riskNote: 'Usually regulated in cosmetics, but some users prefer to avoid it.'
+    },
+    {
+        level: 'low',
+        patterns: [/glycerin/i, /aqua/i, /water/i, /hyaluronic/i, /niacinamide/i, /panthenol/i, /tocopherol/i],
+        detail: 'A commonly used cosmetic ingredient.',
+        riskNote: 'Low risk for most users.'
+    }
+];
+
+const classifyIngredient = (name) => {
+    const normalizedName = cleanIngredientName(name);
+    const match = ingredientRiskRules.find((rule) => (
+        rule.patterns.some((pattern) => pattern.test(normalizedName))
+    ));
+
+    if (match) {
+        return {
+            detail: match.detail,
+            riskNote: match.riskNote,
+            riskLevel: match.level
+        };
+    }
+
+    return {
+        detail: 'Ingredient listed by Open Beauty Facts.',
+        riskNote: 'No specific warning is currently attached to this ingredient.',
+        riskLevel: 'low'
+    };
+};
+
 const uniqueIngredients = (values) => {
     const seen = new Set();
     const ingredients = [];
@@ -30,9 +78,7 @@ const uniqueIngredients = (values) => {
         seen.add(key);
         ingredients.push({
             name,
-            detail: 'Ingredient listed by Open Beauty Facts.',
-            riskNote: 'Risk classification is pending regulatory enrichment.',
-            riskLevel: 'low'
+            ...classifyIngredient(name)
         });
     }
 
@@ -69,6 +115,7 @@ const mapProduct = (barcode, payload) => {
         brand: cleanText(product.brands).split(',')[0].trim() || 'Unknown',
         priceText: '',
         barcode,
+        imageURL: cleanText(product.image_front_url) || cleanText(product.image_url) || null,
         ingredients: uniqueIngredients(ingredientNames)
     };
 };
@@ -80,6 +127,8 @@ const fetchProductByBarcode = async (barcode) => {
         'product_name',
         'generic_name',
         'brands',
+        'image_url',
+        'image_front_url',
         'ingredients',
         'ingredients_tags',
         'ingredients_text',
@@ -119,5 +168,6 @@ const fetchProductByBarcode = async (barcode) => {
 
 module.exports = {
     fetchProductByBarcode,
+    classifyIngredient,
     mapProduct
 };

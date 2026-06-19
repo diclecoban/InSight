@@ -10,6 +10,8 @@ const normalizeEmail = (email) => (
     typeof email === 'string' ? email.trim().toLowerCase() : ''
 );
 const normalizeVerificationCode = (code) => String(code ?? '').trim();
+const createVerificationCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+const createCodeExpiry = () => new Date(Date.now() + 10 * 60 * 1000);
 const normalizeGender = (gender) => {
     const normalized = String(gender ?? '').trim().toLowerCase();
 
@@ -236,8 +238,8 @@ exports.register = async (req, res) => {
         const saltRounds = 10;
         const passwordHash = await bcrypt.hash(password, saltRounds);
         
-        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const codeExpiresAt = new Date(Date.now() + 10 * 60 * 1000); 
+        const verificationCode = createVerificationCode();
+        const codeExpiresAt = createCodeExpiry();
         const allergiesArray = Array.isArray(allergies) ? allergies : [];
 
         await client.query('BEGIN');
@@ -401,6 +403,174 @@ exports.verifyOTP = async (req, res) => {
     } catch (err) {
         console.error("OTP Error:", err);
         res.status(500).json({ error: "An error occurred during verification." });
+    }
+};
+
+exports.requestEmailChangeCurrentCode = async (req, res) => {
+    try {
+        const userID = req.user?.id;
+        const currentEmail = normalizeEmail(req.user?.email);
+        const newEmail = normalizeEmail(req.body.newEmail);
+
+        if (!userID || !currentEmail) {
+            return res.status(401).json({ error: 'Unauthorized.' });
+        }
+
+        if (!newEmail) {
+            return res.status(400).json({ error: 'newEmail is required.' });
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+            return res.status(400).json({ error: 'newEmail must be a valid email address.' });
+        }
+
+        if (newEmail === currentEmail) {
+            return res.status(400).json({ error: 'New email must be different from current email.' });
+        }
+
+        const existing = await pool.query(
+            'SELECT id FROM users WHERE email = $1 AND id <> $2',
+            [newEmail, userID]
+        );
+
+        if (existing.rows.length > 0) {
+            return res.status(400).json({ error: 'This email address is already registered.' });
+        }
+
+        const currentCode = createVerificationCode();
+        const expiresAt = createCodeExpiry();
+
+        await pool.query(
+            `
+            INSERT INTO email_change_requests ("userID", "currentEmail", "newEmail", "currentCode", "expiresAt")
+            VALUES ($1, $2, $3, $4, $5)
+            `,
+            [userID, currentEmail, newEmail, currentCode, expiresAt]
+        );
+
+        console.log(`📧 Email change current OTP for ${currentEmail}: ${currentCode}`);
+        sendVerificationEmail(currentEmail, currentCode).catch((error) => {
+            console.error('Current Email Change OTP Error:', error.message);
+        });
+
+        return res.status(200).json({ message: 'Verification code sent to your current email.' });
+    } catch (error) {
+        console.error('Request Email Change Current Code Error:', error);
+        return res.status(500).json({ error: 'An unexpected error occurred on the server.' });
+    }
+};
+
+exports.verifyEmailChangeCurrentCode = async (req, res) => {
+    try {
+        const userID = req.user?.id;
+        const code = normalizeVerificationCode(req.body.code);
+
+        if (!userID) {
+            return res.status(401).json({ error: 'Unauthorized.' });
+        }
+
+        if (!code) {
+            return res.status(400).json({ error: 'Verification code is required.' });
+        }
+
+        const result = await pool.query(
+            `
+            SELECT id, "newEmail", "currentCode", "expiresAt"
+            FROM email_change_requests
+            WHERE "userID" = $1 AND "currentVerifiedAt" IS NULL
+            ORDER BY "createdAt" DESC
+            LIMIT 1
+            `,
+            [userID]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Email change request not found.' });
+        }
+
+        const request = result.rows[0];
+
+        if (request.currentCode !== code) {
+            return res.status(400).json({ error: 'Invalid verification code.' });
+        }
+
+        if (!request.expiresAt || new Date() > request.expiresAt) {
+            return res.status(400).json({ error: 'Verification code has expired.' });
+        }
+
+        const newCode = createVerificationCode();
+        const expiresAt = createCodeExpiry();
+
+        await pool.query(
+            `
+            UPDATE email_change_requests
+            SET "currentVerifiedAt" = NOW(), "newCode" = $2, "expiresAt" = $3
+            WHERE id = $1
+            `,
+            [request.id, newCode, expiresAt]
+        );
+
+        console.log(`📧 Email change new OTP for ${request.newEmail}: ${newCode}`);
+        sendVerificationEmail(request.newEmail, newCode).catch((error) => {
+            console.error('New Email Change OTP Error:', error.message);
+        });
+
+        return res.status(200).json({ message: 'Verification code sent to your new email.' });
+    } catch (error) {
+        console.error('Verify Email Change Current Code Error:', error);
+        return res.status(500).json({ error: 'An unexpected error occurred on the server.' });
+    }
+};
+
+exports.confirmEmailChangeNewCode = async (req, res) => {
+    try {
+        const userID = req.user?.id;
+        const code = normalizeVerificationCode(req.body.code);
+
+        if (!userID) {
+            return res.status(401).json({ error: 'Unauthorized.' });
+        }
+
+        if (!code) {
+            return res.status(400).json({ error: 'Verification code is required.' });
+        }
+
+        const result = await pool.query(
+            `
+            SELECT id, "newEmail", "newCode", "expiresAt"
+            FROM email_change_requests
+            WHERE "userID" = $1 AND "currentVerifiedAt" IS NOT NULL
+            ORDER BY "createdAt" DESC
+            LIMIT 1
+            `,
+            [userID]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Email change request not found.' });
+        }
+
+        const request = result.rows[0];
+
+        if (request.newCode !== code) {
+            return res.status(400).json({ error: 'Invalid verification code.' });
+        }
+
+        if (!request.expiresAt || new Date() > request.expiresAt) {
+            return res.status(400).json({ error: 'Verification code has expired.' });
+        }
+
+        await pool.query('UPDATE users SET email = $2, is_verified = TRUE WHERE id = $1', [userID, request.newEmail]);
+        await pool.query('DELETE FROM email_change_requests WHERE "userID" = $1', [userID]);
+
+        return res.status(200).json({ email: request.newEmail, message: 'Email updated successfully.' });
+    } catch (error) {
+        if (error.code === '23505') {
+            return res.status(400).json({ error: 'This email address is already registered.' });
+        }
+
+        console.error('Confirm Email Change New Code Error:', error);
+        return res.status(500).json({ error: 'An unexpected error occurred on the server.' });
     }
 };
 

@@ -21,6 +21,7 @@ struct UserProfile: Identifiable, Equatable {
     var lastName: String
     var email: String
     var age: Int
+    var gender: String
     var skinType: String
     var condition: String
     var sensitivity: String
@@ -36,6 +37,7 @@ struct Product: Identifiable, Equatable {
     var name: String
     var brand: String
     var priceText: String
+    var imageURL: URL?
     var barcode: String
 }
 
@@ -86,6 +88,7 @@ struct ScanResult: Identifiable, Equatable {
 
 struct SavedReview: Identifiable, Equatable {
     let id: UUID
+    var productID: UUID
     var productName: String
     var status: SafetyLevel
     var savedAt: Date
@@ -106,11 +109,28 @@ struct RegistrationDraft: Equatable {
     var gender = ""
     var skinType = ""
     var allergies = ""
+
+    var fullName: String? {
+        let name = [firstName, lastName]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+
+        return name.isEmpty ? nil : name
+    }
+
+    var firstNameIfAvailable: String? {
+        let name = firstName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? nil : name
+    }
 }
 
 struct ProfileUpdateDraft: Equatable {
     var firstName = ""
     var lastName = ""
+    var email = ""
+    var age = 18
+    var gender = ""
     var skinType = ""
     var condition = ""
     var sensitivity = ""
@@ -121,6 +141,9 @@ struct ProfileUpdateDraft: Equatable {
     init(profile: UserProfile) {
         firstName = profile.firstName
         lastName = profile.lastName
+        email = profile.email
+        age = profile.age
+        gender = profile.gender
         skinType = profile.skinType
         condition = profile.condition
         sensitivity = profile.sensitivity

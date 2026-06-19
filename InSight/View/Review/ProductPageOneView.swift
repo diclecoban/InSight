@@ -9,10 +9,12 @@ import SwiftUI
 
 struct ProductPageOneView: View {
     @Environment(AppStateViewModel.self) private var appState
+    @Environment(\.dismiss) private var dismiss
     @State private var didShowSavedMessage = false
 
     private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
-    private let accentColor = Color(red: 0.953, green: 0.643, blue: 0.286)
+    private let primaryActionColor = Color(red: 0.208, green: 0.431, blue: 0.329)
+    private let secondaryActionColor = Color(red: 0.898, green: 0.941, blue: 0.918)
 
     private var scanResult: ScanResult {
         appState.latestScanResult ?? AppMockData.sampleScanResult
@@ -31,117 +33,134 @@ struct ProductPageOneView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        GeometryReader { proxy in
             ZStack(alignment: .top) {
                 backgroundColor
                     .ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    header
+                    header(topInset: proxy.safeAreaInsets.top)
 
                     ZStack(alignment: .top) {
                         RoundedRectangle(cornerRadius: 34, style: .continuous)
                             .fill(Color.white)
                             .ignoresSafeArea(edges: .bottom)
 
-                        VStack(spacing: 22) {
-                            ProductHeroCard(product: scanResult.product, tint: safetyColor)
-                                .offset(y: -56)
-                                .padding(.bottom, -30)
+                        ScrollView(showsIndicators: false) {
+                            VStack(spacing: 22) {
+                                ProductHeroCard(product: scanResult.product, tint: safetyColor)
+                                    .offset(y: -56)
+                                    .padding(.bottom, -30)
 
-                            VStack(spacing: 10) {
-                                Text(scanResult.product.brand)
-                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(Color.black.opacity(0.45))
+                                VStack(spacing: 10) {
+                                    Text(scanResult.product.brand)
+                                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(Color.black.opacity(0.45))
 
-                                Text(scanResult.product.name)
-                                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                                    .foregroundStyle(.black)
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal, 24)
+                                    Text(scanResult.product.name)
+                                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                                        .foregroundStyle(.black)
+                                        .multilineTextAlignment(.center)
+                                        .padding(.horizontal, 24)
 
-                                Text("This Product is")
-                                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                                    .foregroundStyle(.black)
+                                    Text(scanResult.product.barcode)
+                                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                                        .foregroundStyle(Color.black.opacity(0.5))
 
-                                Text(safetyText)
-                                    .font(.system(size: 28, weight: .heavy, design: .rounded))
-                                    .foregroundStyle(safetyColor)
-                            }
-                            .multilineTextAlignment(.center)
+                                    Text("This Product is")
+                                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                                        .foregroundStyle(.black)
 
-                            Text(scanResult.summary)
-                                .font(.system(size: 13, weight: .medium, design: .rounded))
-                                .foregroundStyle(Color.black.opacity(0.58))
+                                    Text(safetyText)
+                                        .font(.system(size: 28, weight: .heavy, design: .rounded))
+                                        .foregroundStyle(safetyColor)
+                                }
                                 .multilineTextAlignment(.center)
-                                .padding(.horizontal, 28)
 
-                            SafetyBar(score: score, tint: safetyColor)
+                                Text(scanResult.summary)
+                                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                                    .foregroundStyle(Color.black.opacity(0.58))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 28)
 
-                            Button {
-                                Task {
-                                    await appState.saveLatestScanResult()
-                                    if appState.errorMessage == nil {
-                                        didShowSavedMessage = true
+                                SafetyBar(score: score, tint: safetyColor)
+
+                                Button {
+                                    Task {
+                                        await appState.saveLatestScanResult()
+                                        if appState.errorMessage == nil {
+                                            didShowSavedMessage = true
+                                        }
                                     }
-                                }
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: appState.isLatestScanSaved ? "bookmark.fill" : "bookmark")
-                                        .font(.system(size: 15, weight: .bold))
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: appState.isLatestScanSaved ? "bookmark.fill" : "bookmark")
+                                            .font(.system(size: 15, weight: .bold))
 
-                                    Text(appState.isLatestScanSaved ? String(localized: "Saved to Reviews") : String(localized: "Save Review"))
-                                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                }
-                                .foregroundStyle(appState.isLatestScanSaved ? accentColor : .white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 15)
-                                .background(appState.isLatestScanSaved ? accentColor.opacity(0.12) : accentColor)
-                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            }
-                            .padding(.horizontal, 24)
-                            .disabled(appState.isLoading || appState.isLatestScanSaved)
-
-                            NavigationLink {
-                                DetailReview()
-                            } label: {
-                                Text("Click here to see details")
-                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(.white)
+                                        Text(appState.isLatestScanSaved ? String(localized: "Saved to Reviews") : String(localized: "Save Review"))
+                                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                    }
+                                    .foregroundStyle(appState.isLatestScanSaved ? primaryActionColor : .white)
                                     .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 16)
-                                    .background(accentColor)
+                                    .padding(.vertical, 15)
+                                    .background(appState.isLatestScanSaved ? secondaryActionColor : primaryActionColor)
                                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            }
-                            .padding(.horizontal, 24)
+                                }
+                                .padding(.horizontal, 24)
+                                .disabled(appState.isLoading || appState.isLatestScanSaved)
 
-                            if let errorMessage = appState.errorMessage {
-                                Text(errorMessage)
-                                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                                    .foregroundStyle(Color(red: 0.925, green: 0.302, blue: 0.302))
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal, 28)
-                            } else if didShowSavedMessage {
-                                Text("This analysis is now available in Saved Reviews.")
-                                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                                    .foregroundStyle(Color.black.opacity(0.5))
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal, 28)
-                            }
+                                NavigationLink {
+                                    DetailReview()
+                                } label: {
+                                    Text("Click here to see details")
+                                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(primaryActionColor)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 16)
+                                        .background(secondaryActionColor)
+                                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                }
+                                .padding(.horizontal, 24)
 
-                            Spacer(minLength: 120)
+                                if let errorMessage = appState.errorMessage {
+                                    Text(errorMessage)
+                                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                                        .foregroundStyle(Color(red: 0.925, green: 0.302, blue: 0.302))
+                                        .multilineTextAlignment(.center)
+                                        .padding(.horizontal, 28)
+                                } else if didShowSavedMessage {
+                                    Text("This analysis is now available in Saved Reviews.")
+                                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                                        .foregroundStyle(Color.black.opacity(0.5))
+                                        .multilineTextAlignment(.center)
+                                        .padding(.horizontal, 28)
+                                }
+                            }
+                            .padding(.top, 36)
+                            .padding(.bottom, 140)
                         }
-                        .padding(.top, 36)
                     }
-                    .padding(.top, 52)
+                    .padding(.top, 36)
                 }
             }
-            .toolbar(.hidden, for: .navigationBar)
         }
+        .toolbar(.hidden, for: .navigationBar)
     }
 
-    private var header: some View {
+    private func header(topInset: CGFloat) -> some View {
         HStack(alignment: .top) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(backgroundColor)
+                    .frame(width: 38, height: 38)
+                    .background(Color.white.opacity(0.94))
+                    .clipShape(Circle())
+            }
+            .accessibilityLabel(Text("Back to Scan"))
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(greeting)
                     .font(.system(size: 24, weight: .bold, design: .rounded))
@@ -150,7 +169,10 @@ struct ProductPageOneView: View {
                 Text(appState.displayName)
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.82))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
+            .padding(.leading, 4)
 
             Spacer()
 
@@ -160,7 +182,7 @@ struct ProductPageOneView: View {
                 .frame(width: 30, height: 30)
         }
         .padding(.horizontal, 24)
-        .padding(.top, 16)
+        .padding(.top, 8)
         .padding(.bottom, 62)
     }
 }
@@ -189,26 +211,55 @@ private struct ProductHeroCard: View {
                 )
                 .frame(width: 132, height: 132)
                 .overlay {
-                    VStack(spacing: 10) {
-                        Image(systemName: "shippingbox.fill")
-                            .font(.system(size: 46, weight: .semibold))
-                            .foregroundStyle(tint)
-
-                        Text(product.brand)
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color.black.opacity(0.55))
-                            .lineLimit(1)
-                            .padding(.horizontal, 14)
-
-                        HStack(spacing: 4) {
-                            ForEach(0..<4, id: \.self) { _ in
-                                Circle()
-                                    .fill(Color.white.opacity(0.7))
-                                    .frame(width: 4, height: 4)
-                            }
-                        }
-                    }
+                    productVisual
                 }
+        }
+    }
+
+    @ViewBuilder
+    private var productVisual: some View {
+        if let imageURL = product.imageURL {
+            AsyncImage(url: imageURL) { phase in
+                switch phase {
+                case let .success(image):
+                    image
+                        .resizable()
+                        .scaledToFit()
+                        .padding(10)
+                        .frame(width: 132, height: 132)
+                case .failure:
+                    fallbackVisual
+                case .empty:
+                    ProgressView()
+                        .tint(tint)
+                @unknown default:
+                    fallbackVisual
+                }
+            }
+        } else {
+            fallbackVisual
+        }
+    }
+
+    private var fallbackVisual: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "shippingbox.fill")
+                .font(.system(size: 46, weight: .semibold))
+                .foregroundStyle(tint)
+
+            Text(product.brand)
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.black.opacity(0.55))
+                .lineLimit(1)
+                .padding(.horizontal, 14)
+
+            HStack(spacing: 4) {
+                ForEach(0..<4, id: \.self) { _ in
+                    Circle()
+                        .fill(Color.white.opacity(0.7))
+                        .frame(width: 4, height: 4)
+                }
+            }
         }
     }
 }

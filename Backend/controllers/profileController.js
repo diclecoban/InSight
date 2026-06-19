@@ -6,6 +6,7 @@ const mapProfile = (row) => ({
     lastName: row.lastName,
     email: row.email,
     age: Number(row.age ?? 0),
+    gender: row.gender,
     skinType: row.skinType,
     condition: row.condition ?? 'Not specified',
     sensitivity: row.sensitivity ?? 'Not specified',
@@ -14,7 +15,7 @@ const mapProfile = (row) => ({
 
 exports.getProfile = async (req, res) => {
     try {
-        const { userID } = req.params;
+        const userID = req.user?.id || req.params.userID;
 
         const result = await pool.query(
             `
@@ -23,6 +24,7 @@ exports.getProfile = async (req, res) => {
                 u.email,
                 p."firstName",
                 p."lastName",
+                p.gender,
                 p."skinType",
                 COALESCE(p.condition, 'Not specified') AS condition,
                 COALESCE(p.sensitivity, 'Not specified') AS sensitivity,
@@ -48,7 +50,7 @@ exports.getProfile = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
     try {
-        const { userID } = req.params;
+        const userID = req.user?.id || req.params.userID;
         const {
             firstName,
             lastName,

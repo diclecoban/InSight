@@ -92,8 +92,10 @@ struct AuthField: View {
     @Binding var text: String
 
     var body: some View {
-        TextField(title, text: $text)
+        TextField("", text: $text, prompt: Text(title).foregroundStyle(Color.black.opacity(0.58)))
             .font(.system(size: 14, weight: .medium, design: .rounded))
+            .foregroundStyle(.black)
+            .tint(.black)
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
             .background(Color.white.opacity(0.95))
@@ -106,8 +108,10 @@ struct AuthSecureField: View {
     @Binding var text: String
 
     var body: some View {
-        SecureField(title, text: $text)
+        SecureField("", text: $text, prompt: Text(title).foregroundStyle(Color.black.opacity(0.58)))
             .font(.system(size: 14, weight: .medium, design: .rounded))
+            .foregroundStyle(.black)
+            .tint(.black)
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
             .background(Color.white.opacity(0.95))

@@ -171,6 +171,7 @@ private struct UserProfileResponse: Decodable {
     let lastName: String
     let email: String
     let age: Int
+    let gender: String
     let skinType: String
     let condition: String
     let sensitivity: String
@@ -183,6 +184,7 @@ private struct UserProfileResponse: Decodable {
             lastName: lastName,
             email: email,
             age: age,
+            gender: gender,
             skinType: skinType,
             condition: condition,
             sensitivity: sensitivity,
@@ -194,6 +196,8 @@ private struct UserProfileResponse: Decodable {
 private struct ProfileUpdateRequest: Encodable {
     let firstName: String
     let lastName: String
+    let age: Int
+    let gender: String
     let skinType: String
     let condition: String
     let sensitivity: String
@@ -202,6 +206,8 @@ private struct ProfileUpdateRequest: Encodable {
     init(draft: ProfileUpdateDraft) {
         firstName = draft.firstName
         lastName = draft.lastName
+        age = draft.age
+        gender = draft.gender.apiGenderValue
         skinType = draft.skinType
         condition = draft.condition
         sensitivity = draft.sensitivity
@@ -214,6 +220,7 @@ private struct ProfileUpdateRequest: Encodable {
 
 private struct SavedReviewResponse: Decodable {
     let id: UUID
+    let productID: UUID
     let productName: String
     let status: SafetyLevelResponse
     let savedAt: Date
@@ -221,6 +228,7 @@ private struct SavedReviewResponse: Decodable {
     func toDomain() -> SavedReview {
         SavedReview(
             id: id,
+            productID: productID,
             productName: productName,
             status: status.toDomain(),
             savedAt: savedAt
@@ -275,6 +283,7 @@ private struct ProductResponse: Decodable {
     let name: String
     let brand: String
     let priceText: String
+    let imageURL: URL?
     let barcode: String
 
     func toDomain() -> Product {
@@ -283,6 +292,7 @@ private struct ProductResponse: Decodable {
             name: name,
             brand: brand,
             priceText: priceText,
+            imageURL: imageURL,
             barcode: barcode
         )
     }
@@ -317,6 +327,21 @@ private enum SafetyLevelResponse: String, Decodable {
             return .mostlySafe
         case .risky:
             return .risky
+        }
+    }
+}
+
+private extension String {
+    var apiGenderValue: String {
+        switch trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "female":
+            return "female"
+        case "male":
+            return "male"
+        case "non-binary", "non binary", "other":
+            return "other"
+        default:
+            return self
         }
     }
 }

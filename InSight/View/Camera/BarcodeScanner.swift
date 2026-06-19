@@ -84,6 +84,10 @@ class BarcodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     func stopSession() {
         session.stopRunning()
     }
+
+    func resetScan() {
+        scannedCode = nil
+    }
     
     func toggleFlash() {
         guard let device = device, device.hasTorch else { return }
@@ -97,8 +101,10 @@ class BarcodeScanner: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     func metadataOutput(_ output: AVCaptureMetadataOutput,
                         didOutput objects: [AVMetadataObject],
                         from connection: AVCaptureConnection) {
-        if let object = objects.first as? AVMetadataMachineReadableCodeObject {
-            scannedCode = object.stringValue
+        if let object = objects.first as? AVMetadataMachineReadableCodeObject,
+           let code = object.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !code.isEmpty {
+            scannedCode = code
             stopSession()
         }
     }

@@ -15,7 +15,7 @@ const {
 
 const app = express();
 const PORT = 3000;
-const IP_ADDRESS = '192.168.1.135';
+const IP_ADDRESS = '192.168.1.119';
 
 app.use(attachRequestID);
 app.use(applySecurityHeaders);

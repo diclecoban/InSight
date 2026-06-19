@@ -1,5 +1,8 @@
 const pool = require('../config/db');
-const { fetchProductByBarcode } = require('../services/openBeautyFactsService');
+const {
+    classifyIngredient,
+    fetchProductByBarcode
+} = require('../services/openBeautyFactsService');
 
 const SCAN_SOURCES = new Set(['barcode', 'ocr', 'manual', 'photo']);
 const SUPPORTED_LOCALES = new Set(['en', 'tr']);
@@ -68,6 +71,23 @@ const calculateScore = (ingredients) => {
     return Math.max(0.05, Math.min(1, 1 - penalty));
 };
 
+const enrichIngredient = (ingredient) => {
+    const classification = classifyIngredient(ingredient.name);
+    const hasSpecificDetail = ingredient.detail &&
+        !ingredient.detail.includes('Open Beauty Facts') &&
+        !ingredient.detail.includes('pending regulatory');
+    const hasSpecificRiskNote = ingredient.riskNote &&
+        !ingredient.riskNote.includes('pending regulatory') &&
+        !ingredient.riskNote.includes('No specific warning');
+
+    return {
+        ...ingredient,
+        detail: hasSpecificDetail ? ingredient.detail : classification.detail,
+        riskNote: hasSpecificRiskNote ? ingredient.riskNote : classification.riskNote,
+        riskLevel: classification.riskLevel
+    };
+};
+
 const localizeIngredient = (ingredient, locale) => {
     const translation = ingredientTranslations[locale]?.[ingredient.name];
 
@@ -89,6 +109,7 @@ const mapScanResult = (scan, product, ingredients, score, locale) => {
             name: product.name,
             brand: product.brand,
             priceText: product.priceText,
+            imageURL: product.imageURL || null,
             barcode: product.barcode
         },
         source: scan.source,
@@ -136,7 +157,7 @@ const insertProductIngredients = async (client, productID, ingredients) => {
 
 const findOrCreateProduct = async (client, barcode) => {
     const existing = await client.query(
-        'SELECT id, name, brand, "priceText", barcode FROM products WHERE barcode = $1',
+        'SELECT id, name, brand, "priceText", "imageURL", barcode FROM products WHERE barcode = $1',
         [barcode]
     );
 
@@ -145,24 +166,26 @@ const findOrCreateProduct = async (client, barcode) => {
     }
 
     const openBeautyFactsProduct = await fetchProductByBarcode(barcode);
-    const productData = openBeautyFactsProduct || {
-        name: 'Scanned Product',
-        brand: 'InSight Demo',
-        priceText: '$19.99',
-        barcode,
-        ingredients: fallbackIngredients
-    };
+    if (!openBeautyFactsProduct) {
+        return null;
+    }
 
     const created = await client.query(
         `
-        INSERT INTO products (name, brand, "priceText", barcode)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id, name, brand, "priceText", barcode
+        INSERT INTO products (name, brand, "priceText", "imageURL", barcode)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, name, brand, "priceText", "imageURL", barcode
         `,
-        [productData.name, productData.brand, productData.priceText, productData.barcode]
+        [
+            openBeautyFactsProduct.name,
+            openBeautyFactsProduct.brand,
+            openBeautyFactsProduct.priceText,
+            openBeautyFactsProduct.imageURL,
+            openBeautyFactsProduct.barcode
+        ]
     );
 
-    await insertProductIngredients(client, created.rows[0].id, productData.ingredients);
+    await insertProductIngredients(client, created.rows[0].id, openBeautyFactsProduct.ingredients);
 
     return created.rows[0];
 };
@@ -185,10 +208,11 @@ const getProductIngredients = async (client, productID) => {
     );
 
     if (result.rows.length > 0) {
-        return result.rows;
+        return result.rows.map(enrichIngredient);
     }
 
-    return insertProductIngredients(client, productID, fallbackIngredients);
+    const inserted = await insertProductIngredients(client, productID, fallbackIngredients);
+    return inserted.map(enrichIngredient);
 };
 
 exports.analyzeBarcode = async (req, res) => {
@@ -212,6 +236,11 @@ exports.analyzeBarcode = async (req, res) => {
         await client.query('BEGIN');
 
         const product = await findOrCreateProduct(client, normalizedBarcode);
+        if (!product) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'No result was found for this barcode.' });
+        }
+
         const ingredients = await getProductIngredients(client, product.id);
         const score = calculateScore(ingredients);
         const safetyLevel = safetyFromScore(score);

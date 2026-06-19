@@ -75,6 +75,52 @@ struct APIAuthService: AuthServicing {
 
         try await client.request(endpoint)
     }
+
+    func requestEmailChangeCurrentCode(newEmail: String, session: AuthSession) async throws {
+        let requestBody = try client.encodeBody(EmailChangeRequest(newEmail: newEmail))
+        let endpoint = APIEndpoint(
+            path: "/auth/email-change/request-current-code",
+            method: .post,
+            headers: [
+                "Authorization": "Bearer \(session.authToken)",
+                "Content-Type": "application/json"
+            ],
+            body: requestBody
+        )
+
+        try await client.request(endpoint)
+    }
+
+    func verifyEmailChangeCurrentCode(code: String, session: AuthSession) async throws {
+        let requestBody = try client.encodeBody(CodeVerificationRequest(code: code))
+        let endpoint = APIEndpoint(
+            path: "/auth/email-change/verify-current-code",
+            method: .post,
+            headers: [
+                "Authorization": "Bearer \(session.authToken)",
+                "Content-Type": "application/json"
+            ],
+            body: requestBody
+        )
+
+        try await client.request(endpoint)
+    }
+
+    func confirmEmailChangeNewCode(code: String, session: AuthSession) async throws -> String {
+        let requestBody = try client.encodeBody(CodeVerificationRequest(code: code))
+        let endpoint = APIEndpoint(
+            path: "/auth/email-change/confirm-new-code",
+            method: .post,
+            headers: [
+                "Authorization": "Bearer \(session.authToken)",
+                "Content-Type": "application/json"
+            ],
+            body: requestBody
+        )
+
+        let response: EmailChangeResponse = try await client.request(endpoint)
+        return response.email
+    }
 }
 
 private struct RegisterRequest: Encodable {
@@ -119,6 +165,18 @@ private struct LogoutRequest: Encodable {
 
 private struct RefreshRequest: Encodable {
     let refreshToken: String
+}
+
+private struct EmailChangeRequest: Encodable {
+    let newEmail: String
+}
+
+private struct CodeVerificationRequest: Encodable {
+    let code: String
+}
+
+private struct EmailChangeResponse: Decodable {
+    let email: String
 }
 
 private struct AuthResponse: Decodable {

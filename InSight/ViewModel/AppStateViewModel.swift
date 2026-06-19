@@ -69,17 +69,17 @@ final class AppStateViewModel {
     }
 
     var displayName: String {
-        userProfile?.fullName ?? "Guest User"
+        userProfile?.fullName ?? registrationDraft.fullName ?? String(localized: "Profile")
     }
 
     var firstName: String {
-        userProfile?.firstName ?? "Guest"
+        userProfile?.firstName ?? registrationDraft.firstNameIfAvailable ?? String(localized: "Profile")
     }
 
     var isLatestScanSaved: Bool {
         guard let latestScanResult else { return false }
         return savedReviews.contains { review in
-            review.productName == latestScanResult.product.name
+            review.productID == latestScanResult.product.id
         }
     }
 
@@ -115,6 +115,11 @@ final class AppStateViewModel {
 
     func updateRegistrationDraft(_ draft: RegistrationDraft) {
         registrationDraft = draft
+    }
+
+    func prepareForNewScan() {
+        latestScanResult = nil
+        errorMessage = nil
     }
 
     func register() async {
@@ -202,6 +207,47 @@ final class AppStateViewModel {
         }
     }
 
+    func requestEmailChangeCurrentCode(newEmail: String) async {
+        await performAuthenticatedRequest { session in
+            try await authService.requestEmailChangeCurrentCode(newEmail: newEmail, session: session)
+        }
+    }
+
+    func verifyEmailChangeCurrentCode(_ code: String) async {
+        await performAuthenticatedRequest { session in
+            try await authService.verifyEmailChangeCurrentCode(code: code, session: session)
+        }
+    }
+
+    func confirmEmailChangeNewCode(_ code: String) async {
+        await performAuthenticatedRequest { activeSession in
+            let newEmail = try await authService.confirmEmailChangeNewCode(code: code, session: activeSession)
+            let updatedSession = AuthSession(
+                userID: activeSession.userID,
+                email: newEmail,
+                authToken: activeSession.authToken,
+                refreshToken: activeSession.refreshToken
+            )
+
+            session = updatedSession
+            sessionStore.saveSession(updatedSession)
+
+            if var userProfile {
+                userProfile.email = newEmail
+                self.userProfile = userProfile
+            }
+        }
+    }
+
+    func reloadProfile() async {
+        await performAuthenticatedRequest { session in
+            userProfile = try await profileService.fetchUserProfile(
+                userID: session.userID,
+                authToken: session.authToken
+            )
+        }
+    }
+
     func signOut() {
         let sessionToLogout = session
 
@@ -271,14 +317,21 @@ final class AppStateViewModel {
         let userID = session.userID
         let authToken = session.authToken
 
-        async let profile = profileService.fetchUserProfile(userID: userID, authToken: authToken)
-        async let reviews = contentService.fetchSavedReviews(for: userID, authToken: authToken)
-        async let recommendations = contentService.fetchRecommendations(for: userID, authToken: authToken)
+        userProfile = try await profileService.fetchUserProfile(userID: userID, authToken: authToken)
 
-        userProfile = try await profile
-        savedReviews = try await reviews
-        self.recommendations = try await recommendations
+        do {
+            savedReviews = try await contentService.fetchSavedReviews(for: userID, authToken: authToken)
+        } catch {
+            savedReviews = []
+        }
+
+        do {
+            self.recommendations = try await contentService.fetchRecommendations(for: userID, authToken: authToken)
+        } catch {
+            self.recommendations = []
+        }
     }
+
 
     private func performAuthenticatedRequest(_ operation: (AuthSession) async throws -> Void) async {
         await performRequest {

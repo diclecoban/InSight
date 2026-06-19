@@ -16,6 +16,7 @@ test('analyzeBarcode returns a personalized scan result for an existing product'
         name: 'Hydrating Cleanser',
         brand: 'InSight Demo',
         priceText: '$19.99',
+        imageURL: null,
         barcode: '8691234567890'
     };
     const client = {
@@ -116,6 +117,7 @@ test('analyzeBarcode imports a missing barcode from Open Beauty Facts', async ()
         name: 'Gentle Face Cream',
         brand: 'Demo Brand',
         priceText: '',
+        imageURL: 'https://images.openbeautyfacts.org/demo.jpg',
         barcode: '3560070791460'
     };
     const ingredients = [
@@ -160,10 +162,16 @@ test('analyzeBarcode imports a missing barcode from Open Beauty Facts', async ()
     };
     const scanController = loadControllerWithPool(scanControllerPath, pool, {
         [openBeautyFactsServicePath]: {
+            classifyIngredient: (name) => ({
+                detail: `Classified ${name}`,
+                riskNote: `Risk note ${name}`,
+                riskLevel: 'low'
+            }),
             fetchProductByBarcode: async () => ({
                 name: product.name,
                 brand: product.brand,
                 priceText: product.priceText,
+                imageURL: product.imageURL,
                 barcode: product.barcode,
                 ingredients
             })
@@ -185,9 +193,49 @@ test('analyzeBarcode imports a missing barcode from Open Beauty Facts', async ()
     assert.equal(res.statusCode, 200);
     assert.equal(res.body.product.name, 'Gentle Face Cream');
     assert.equal(res.body.product.brand, 'Demo Brand');
+    assert.equal(res.body.product.imageURL, 'https://images.openbeautyfacts.org/demo.jpg');
     assert.equal(res.body.safetyLevel, 'safe');
     assert.deepEqual(
         res.body.ingredients.map((ingredient) => ingredient.name),
         ['Aqua', 'Glycerin']
     );
+});
+
+test('analyzeBarcode returns 404 when a missing barcode is not in Open Beauty Facts', async () => {
+    const client = {
+        query: createQueryQueue([
+            { rows: [] },
+            { rows: [] },
+            { rows: [] }
+        ]),
+        release() {}
+    };
+    const pool = {
+        connect: async () => client
+    };
+    const scanController = loadControllerWithPool(scanControllerPath, pool, {
+        [openBeautyFactsServicePath]: {
+            classifyIngredient: (name) => ({
+                detail: `Classified ${name}`,
+                riskNote: `Risk note ${name}`,
+                riskLevel: 'low'
+            }),
+            fetchProductByBarcode: async () => null
+        }
+    });
+    const req = {
+        headers: {
+            'x-scan-source': 'barcode',
+            'accept-language': 'en-US'
+        },
+        body: {
+            barcode: '0000000000000'
+        }
+    };
+    const res = createResponse();
+
+    await scanController.analyzeBarcode(req, res);
+
+    assert.equal(res.statusCode, 404);
+    assert.deepEqual(res.body, { error: 'No result was found for this barcode.' });
 });

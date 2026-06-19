@@ -2,6 +2,7 @@ const pool = require('../config/db');
 
 const mapSavedReview = (row) => ({
     id: row.id,
+    productID: row.productID,
     productName: row.productName,
     status: row.status,
     savedAt: row.savedAt
@@ -15,12 +16,13 @@ const mapRecommendation = (row) => ({
 
 exports.getSavedReviews = async (req, res) => {
     try {
-        const { userID } = req.params;
+        const userID = req.user?.id || req.params.userID;
 
         const result = await pool.query(
             `
             SELECT
                 sr.id,
+                sr."productID" AS "productID",
                 p.name AS "productName",
                 sr.status,
                 sr."savedAt"
@@ -41,7 +43,7 @@ exports.getSavedReviews = async (req, res) => {
 
 exports.saveReview = async (req, res) => {
     try {
-        const { userID } = req.params;
+        const userID = req.user?.id || req.params.userID;
         const { productID, status } = req.body;
 
         if (!productID || !status) {
@@ -73,7 +75,8 @@ exports.saveReview = async (req, res) => {
 
 exports.deleteSavedReview = async (req, res) => {
     try {
-        const { userID, reviewID } = req.params;
+        const userID = req.user?.id || req.params.userID;
+        const { reviewID } = req.params;
 
         const result = await pool.query(
             'DELETE FROM saved_reviews WHERE "userID" = $1 AND id = $2 RETURNING id',
@@ -93,7 +96,7 @@ exports.deleteSavedReview = async (req, res) => {
 
 exports.getRecommendations = async (req, res) => {
     try {
-        const { userID } = req.params;
+        const userID = req.user?.id || req.params.userID;
 
         const result = await pool.query(
             `

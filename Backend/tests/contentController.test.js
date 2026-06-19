@@ -15,6 +15,7 @@ test('getSavedReviews returns saved reviews ordered by the controller query', as
             {
                 rows: [{
                     id: '55555555-5555-4555-8555-555555555555',
+                    productID: '99999999-9999-4999-8999-999999999999',
                     productName: 'Hydrating Cleanser',
                     status: 'safe',
                     savedAt
@@ -25,7 +26,10 @@ test('getSavedReviews returns saved reviews ordered by the controller query', as
     const contentController = loadControllerWithPool(contentControllerPath, pool);
     const req = {
         params: {
-            userID: 'user-id'
+            userID: 'stale-user-id'
+        },
+        user: {
+            id: 'user-id'
         }
     };
     const res = createResponse();
@@ -35,6 +39,7 @@ test('getSavedReviews returns saved reviews ordered by the controller query', as
     assert.equal(res.statusCode, 200);
     assert.deepEqual(res.body, [{
         id: '55555555-5555-4555-8555-555555555555',
+        productID: '99999999-9999-4999-8999-999999999999',
         productName: 'Hydrating Cleanser',
         status: 'safe',
         savedAt
@@ -50,7 +55,10 @@ test('saveReview validates required body fields', async () => {
     const contentController = loadControllerWithPool(contentControllerPath, pool);
     const req = {
         params: {
-            userID: 'user-id'
+            userID: 'stale-user-id'
+        },
+        user: {
+            id: 'user-id'
         },
         body: {
             productID: '',
@@ -80,7 +88,10 @@ test('saveReview inserts or updates a saved review', async () => {
     const contentController = loadControllerWithPool(contentControllerPath, pool);
     const req = {
         params: {
-            userID: 'user-id'
+            userID: 'stale-user-id'
+        },
+        user: {
+            id: 'user-id'
         },
         body: {
             productID: 'product-id',
@@ -115,7 +126,10 @@ test('getRecommendations returns personalized and global recommendations', async
     const contentController = loadControllerWithPool(contentControllerPath, pool);
     const req = {
         params: {
-            userID: 'user-id'
+            userID: 'stale-user-id'
+        },
+        user: {
+            id: 'user-id'
         }
     };
     const res = createResponse();

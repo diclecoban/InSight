@@ -9,6 +9,7 @@ import SwiftUI
 
 struct DetailReview: View {
     @Environment(AppStateViewModel.self) private var appState
+    @Environment(\.dismiss) private var dismiss
 
     private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
     private let accentColor = Color(red: 0.953, green: 0.643, blue: 0.286)
@@ -25,102 +26,123 @@ struct DetailReview: View {
     }
 
     var body: some View {
-        ZStack(alignment: .top) {
-            backgroundColor
-                .ignoresSafeArea()
+        GeometryReader { proxy in
+            ZStack(alignment: .top) {
+                backgroundColor
+                    .ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(greeting)
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
+                VStack(spacing: 0) {
+                    header(topInset: proxy.safeAreaInsets.top)
 
-                        Text(appState.displayName)
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.82))
-                    }
+                    ZStack(alignment: .top) {
+                        RoundedRectangle(cornerRadius: 34, style: .continuous)
+                            .fill(Color.white)
+                            .ignoresSafeArea(edges: .bottom)
 
-                    Spacer()
+                        ScrollView(showsIndicators: false) {
+                            VStack(alignment: .leading, spacing: 18) {
+                                HStack(spacing: 16) {
+                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                        .fill(Color.black.opacity(0.06))
+                                        .frame(width: 96, height: 112)
+                                        .overlay {
+                                            Image(systemName: "doc.text.image.fill")
+                                                .font(.system(size: 32))
+                                                .foregroundStyle(accentColor)
+                                        }
 
-                    Image(systemName: "bell.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 30, height: 30)
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 16)
-                .padding(.bottom, 52)
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text(scanResult.product.name)
+                                            .font(.system(size: 19, weight: .bold, design: .rounded))
+                                            .lineLimit(2)
 
-                ZStack(alignment: .top) {
-                    RoundedRectangle(cornerRadius: 34, style: .continuous)
-                        .fill(Color.white)
-                        .ignoresSafeArea(edges: .bottom)
+                                        Text(scoreText)
+                                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                            .foregroundStyle(scanResult.safetyLevel.color)
 
-                    ScrollView(showsIndicators: false) {
-                        VStack(alignment: .leading, spacing: 18) {
-                            HStack(spacing: 16) {
-                                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                    .fill(Color.black.opacity(0.06))
-                                    .frame(width: 96, height: 112)
-                                    .overlay {
-                                        Image(systemName: "doc.text.image.fill")
-                                            .font(.system(size: 32))
-                                            .foregroundStyle(accentColor)
+                                        Text(scanResult.summary)
+                                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                                            .foregroundStyle(Color.black.opacity(0.6))
                                     }
 
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(scanResult.product.name)
-                                        .font(.system(size: 19, weight: .bold, design: .rounded))
-                                        .lineLimit(2)
+                                    Spacer()
+                                }
+                                .padding(18)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                        .fill(Color.white)
+                                        .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 4)
+                                )
 
-                                    Text(scoreText)
-                                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                        .foregroundStyle(scanResult.safetyLevel.color)
-
+                                DetailSection(title: "Overview") {
                                     Text(scanResult.summary)
-                                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                                        .foregroundStyle(Color.black.opacity(0.6))
                                 }
 
-                                Spacer()
-                            }
-                            .padding(18)
-                            .background(
-                                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                    .fill(Color.white)
-                                    .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 4)
-                            )
-
-                            DetailSection(title: "Overview") {
-                                Text(scanResult.summary)
-                            }
-
-                            DetailSection(title: "Ingredients") {
-                                if scanResult.ingredients.isEmpty {
-                                    Text("No ingredient details were found for this product.")
-                                } else {
-                                    ForEach(scanResult.ingredients) { ingredient in
-                                        IngredientDetailRow(ingredient: ingredient)
+                                DetailSection(title: "Ingredients") {
+                                    if scanResult.ingredients.isEmpty {
+                                        Text("No ingredient details were found for this product.")
+                                    } else {
+                                        ForEach(scanResult.ingredients) { ingredient in
+                                            IngredientDetailRow(ingredient: ingredient)
+                                        }
                                     }
                                 }
-                            }
 
-                            DetailSection(title: "Why It Matters") {
-                                Text(personalizedExplanation)
+                                DetailSection(title: "Why It Matters") {
+                                    Text(personalizedExplanation)
+                                }
                             }
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundStyle(Color.black.opacity(0.72))
+                            .padding(.horizontal, 22)
+                            .padding(.top, 24)
+                            .padding(.bottom, 120)
                         }
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(Color.black.opacity(0.72))
-                        .padding(.horizontal, 22)
-                        .padding(.top, 24)
-                        .padding(.bottom, 120)
                     }
+                    .padding(.top, 20)
                 }
-                .padding(.top, 20)
             }
         }
         .toolbar(.hidden, for: .navigationBar)
+    }
+
+    private func header(topInset: CGFloat) -> some View {
+        HStack(alignment: .top) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(backgroundColor)
+                    .frame(width: 38, height: 38)
+                    .background(Color.white.opacity(0.94))
+                    .clipShape(Circle())
+            }
+            .accessibilityLabel(Text("Back to Results"))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(greeting)
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+
+                Text(appState.displayName)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.82))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .padding(.leading, 4)
+
+            Spacer()
+
+            Image(systemName: "bell.fill")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 30, height: 30)
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 8)
+        .padding(.bottom, 52)
     }
 
     private var personalizedExplanation: String {

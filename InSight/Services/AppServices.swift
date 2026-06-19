@@ -8,6 +8,9 @@ protocol AuthServicing {
     func verifyOTP(email: String, code: String) async throws -> AuthSession
     func refresh(session: AuthSession) async throws -> AuthSession
     func logout(session: AuthSession) async throws
+    func requestEmailChangeCurrentCode(newEmail: String, session: AuthSession) async throws
+    func verifyEmailChangeCurrentCode(code: String, session: AuthSession) async throws
+    func confirmEmailChangeNewCode(code: String, session: AuthSession) async throws -> String
 }
 
 protocol SessionPersisting {
@@ -69,6 +72,7 @@ enum AppMockData {
         lastName: "Clay",
         email: "susan@insight.app",
         age: 19,
+        gender: "female",
         skinType: "Dry",
         condition: "Sensitive Skin",
         sensitivity: "High",
@@ -81,9 +85,9 @@ enum AppMockData {
     ]
 
     static let savedReviews = [
-        SavedReview(id: UUID(), productName: "Hydrating Cleanser", status: .mostlySafe, savedAt: .now),
-        SavedReview(id: UUID(), productName: "Vitamin C Serum", status: .safe, savedAt: .now),
-        SavedReview(id: UUID(), productName: "Fragrance Mist", status: .risky, savedAt: .now)
+        SavedReview(id: UUID(), productID: UUID(), productName: "Hydrating Cleanser", status: .mostlySafe, savedAt: .now),
+        SavedReview(id: UUID(), productID: UUID(), productName: "Vitamin C Serum", status: .safe, savedAt: .now),
+        SavedReview(id: UUID(), productID: UUID(), productName: "Fragrance Mist", status: .risky, savedAt: .now)
     ]
 
     static let sampleScanResult = ScanResult(
@@ -93,6 +97,7 @@ enum AppMockData {
             name: "CERAVE Cleanser",
             brand: "CeraVe",
             priceText: "$19.99",
+            imageURL: nil,
             barcode: "8691234567890"
         ),
         score: 0.7,
@@ -170,6 +175,19 @@ struct MockAuthService: AuthServicing {
     func logout(session: AuthSession) async throws {
         try await Task.sleep(for: .milliseconds(150))
     }
+
+    func requestEmailChangeCurrentCode(newEmail: String, session: AuthSession) async throws {
+        try await Task.sleep(for: .milliseconds(250))
+    }
+
+    func verifyEmailChangeCurrentCode(code: String, session: AuthSession) async throws {
+        try await Task.sleep(for: .milliseconds(250))
+    }
+
+    func confirmEmailChangeNewCode(code: String, session: AuthSession) async throws -> String {
+        try await Task.sleep(for: .milliseconds(250))
+        return session.email
+    }
 }
 
 struct InMemorySessionStore: SessionPersisting {
@@ -197,6 +215,7 @@ struct MockProfileService: ProfileServicing {
             lastName: draft.lastName,
             email: AppMockData.profile.email,
             age: AppMockData.profile.age,
+            gender: draft.gender,
             skinType: draft.skinType,
             condition: draft.condition,
             sensitivity: draft.sensitivity,
@@ -242,6 +261,7 @@ struct MockScanService: ScanServicing {
             name: "Scanned Product",
             brand: "InSight Demo",
             priceText: "$19.99",
+            imageURL: nil,
             barcode: barcode
         )
         result.scannedAt = .now

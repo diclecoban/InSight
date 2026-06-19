@@ -27,6 +27,8 @@ struct ListsView: View {
                         Text(appState.displayName)
                             .font(.system(size: 13, weight: .medium, design: .rounded))
                             .foregroundStyle(.white.opacity(0.82))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                     }
 
                     Spacer()
@@ -37,7 +39,7 @@ struct ListsView: View {
                         .frame(width: 30, height: 30)
                 }
                 .padding(.horizontal, 24)
-                .padding(.top, 16)
+                .padding(.top, 8)
                 .padding(.bottom, 52)
 
                 ZStack(alignment: .top) {

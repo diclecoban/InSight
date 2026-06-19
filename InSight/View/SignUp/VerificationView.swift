@@ -33,12 +33,14 @@ struct VerificationView: View {
                                 .frame(width: 18, height: 2)
                         }
 
-                        TextField("0", text: $otpFields[index])
+                        TextField("", text: $otpFields[index], prompt: Text("0").foregroundStyle(Color.black.opacity(0.55)))
                             .frame(width: 38, height: 46)
                             .background(Color.white.opacity(0.92))
                             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                             .multilineTextAlignment(.center)
                             .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundStyle(.black)
+                            .tint(.black)
                             .keyboardType(.numberPad)
                             .focused($focusedField, equals: index)
                             .onChange(of: otpFields[index]) { _, newValue in
