@@ -36,6 +36,7 @@ final class AppStateViewModel {
     var errorMessage: String?
     var sessionRestoreState: SessionRestoreState
     var backendConnectionState: BackendConnectionState = .unchecked
+    var selectedTheme: AppTheme = .clinicalWarm
 
     init(
         authService: AuthServicing = MockAuthService(),
@@ -115,6 +116,10 @@ final class AppStateViewModel {
 
     func updateRegistrationDraft(_ draft: RegistrationDraft) {
         registrationDraft = draft
+    }
+
+    func updateTheme(_ theme: AppTheme) {
+        selectedTheme = theme
     }
 
     func prepareForNewScan() {

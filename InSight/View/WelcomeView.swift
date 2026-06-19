@@ -13,9 +13,10 @@ struct WelcomeView: View {
     @State private var cardLift = false
     @State private var selectedIngredient = 0
 
-    private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
-    private let accentColor = Color(red: 1.0, green: 0.176, blue: 0.333)
-    private let amberColor = Color(red: 0.953, green: 0.643, blue: 0.286)
+    private var theme: AppTheme { appState.selectedTheme }
+    private var backgroundColor: Color { theme.brand }
+    private var accentColor: Color { theme.accent }
+    private var amberColor: Color { theme.gold }
     private let paperColor = Color(red: 0.972, green: 0.978, blue: 0.975)
     private let ingredients = ["Glycerin", "Niacinamide", "Fragrance"]
 
@@ -40,11 +41,13 @@ struct WelcomeView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 28)
                     .padding(.top, 28)
+                    .softAppear()
 
                     Spacer(minLength: 18)
 
                     animatedScanner
                         .padding(.horizontal, 26)
+                        .softAppear(delay: 0.1)
 
                     Spacer(minLength: 22)
 
@@ -60,6 +63,7 @@ struct WelcomeView: View {
                                 .background(accentColor)
                                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                         }
+                        .buttonStyle(PressableButtonStyle())
 
                         NavigationLink {
                             PageOneView()
@@ -72,9 +76,11 @@ struct WelcomeView: View {
                                 .background(Color.white.opacity(0.94))
                                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                         }
+                        .buttonStyle(PressableButtonStyle())
                     }
                     .padding(.horizontal, 24)
                     .padding(.bottom, 28)
+                    .softAppear(delay: 0.18)
                 }
             }
             .toolbar(.hidden, for: .navigationBar)

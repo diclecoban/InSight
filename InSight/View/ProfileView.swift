@@ -11,51 +11,56 @@ struct ProfileView: View {
     @Environment(AppStateViewModel.self) private var appState
     @State private var isShowingEditProfile = false
 
-    private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
-    private let accentColor = Color(red: 0.953, green: 0.643, blue: 0.286)
+    private var theme: AppTheme { appState.selectedTheme }
+    private var backgroundColor: Color { theme.brand }
 
     var body: some View {
-        ZStack(alignment: .top) {
-            backgroundColor
-                .ignoresSafeArea()
+        GeometryReader { proxy in
+            ZStack(alignment: .top) {
+                InSightScreenBackground(theme: theme)
 
-            VStack(spacing: 0) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(greeting)
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        HStack(alignment: .top) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(greeting)
+                                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.white)
 
-                        Text(appState.displayName)
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.82))
-                            .lineLimit(1)
-                            .truncationMode(.tail)
+                                Text(appState.displayName)
+                                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                                    .foregroundStyle(.white.opacity(0.82))
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "bell.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(width: 30, height: 30)
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.top, 8)
+                        .padding(.bottom, 56)
+                        .softAppear()
+
+                        Group {
+                            if let profile = appState.userProfile {
+                                profileContent(profile)
+                            } else {
+                                missingProfileContent
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: max(0, proxy.size.height - 150), alignment: .top)
+                        .background(
+                            TopRoundedPanelBackground(fill: theme.surface)
+                        )
+                        .padding(.top, 22)
                     }
-
-                    Spacer()
-
-                    Image(systemName: "bell.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 30, height: 30)
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 8)
-                .padding(.bottom, 56)
-
-                ZStack(alignment: .top) {
-                    RoundedRectangle(cornerRadius: 34, style: .continuous)
-                        .fill(Color.white)
-                        .ignoresSafeArea(edges: .bottom)
-
-                    if let profile = appState.userProfile {
-                        profileContent(profile)
-                    } else {
-                        missingProfileContent
-                    }
-                }
-                .padding(.top, 22)
             }
         }
         .sheet(isPresented: $isShowingEditProfile) {
@@ -67,73 +72,89 @@ struct ProfileView: View {
     }
 
     private func profileContent(_ profile: UserProfile) -> some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 18) {
-                VStack(spacing: 12) {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(red: 0.996, green: 0.761, blue: 0.471), Color(red: 0.957, green: 0.443, blue: 0.365)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+        VStack(spacing: 18) {
+            VStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(red: 0.996, green: 0.761, blue: 0.471), Color(red: 0.957, green: 0.443, blue: 0.365)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
                         )
-                        .frame(width: 92, height: 92)
-                        .overlay {
-                            Text(profileInitials(profile))
-                                .font(.system(size: 28, weight: .heavy, design: .rounded))
-                                .foregroundStyle(.white)
-                        }
-                        .offset(y: -44)
-                        .padding(.bottom, -32)
-
-                    Text("My Profile")
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundStyle(.black)
-
-                    VStack(spacing: 14) {
-                        ProfileInfoRow(title: "Name", value: profile.fullName)
-                        ProfileInfoRow(title: "Email", value: profile.email)
-                        ProfileInfoRow(title: "Age", value: String(profile.age))
-                        ProfileInfoRow(title: "Gender", value: genderDisplay(profile.gender))
+                    )
+                    .frame(width: 92, height: 92)
+                    .overlay {
+                        Text(profileInitials(profile))
+                            .font(.system(size: 28, weight: .heavy, design: .rounded))
+                            .foregroundStyle(.white)
                     }
+                    .offset(y: -44)
+                    .padding(.bottom, -32)
+
+                Text("My Profile")
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundStyle(theme.textPrimary)
+
+                VStack(spacing: 14) {
+                    ProfileInfoRow(title: "Name", value: profile.fullName, theme: theme)
+                    ProfileInfoRow(title: "Email", value: profile.email, theme: theme)
+                    ProfileInfoRow(title: "Age", value: String(profile.age), theme: theme)
+                    ProfileInfoRow(title: "Gender", value: genderDisplay(profile.gender), theme: theme)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 22)
-                .background(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .fill(Color.white)
-                        .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 4)
-                )
-
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("My Health DNA")
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundStyle(.black)
-
-                    HStack(spacing: 12) {
-                        ProfileMetricCard(icon: "drop.fill", title: "Skin Type", value: cleanDisplay(profile.skinType))
-                        ProfileMetricCard(
-                            icon: "allergens.fill",
-                            title: "Reaction",
-                            value: allergiesDisplay(profile.allergies)
-                        )
-                    }
-                }
-                .padding(20)
-                .background(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(Color.white)
-                        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
-                )
-
-                profileActions
             }
-            .padding(.horizontal, 22)
-            .padding(.top, 24)
-            .padding(.bottom, 120)
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 22)
+            .background(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(theme.card)
+                    .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 4)
+            )
+            .softAppear(delay: 0.06)
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("My Health DNA")
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundStyle(theme.textPrimary)
+
+                HStack(spacing: 12) {
+                    ProfileMetricCard(icon: "drop.fill", title: "Skin Type", value: cleanDisplay(profile.skinType), theme: theme)
+                    ProfileMetricCard(
+                        icon: "allergens.fill",
+                        title: "Reaction",
+                        value: allergiesDisplay(profile.allergies),
+                        theme: theme
+                    )
+                }
+            }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(theme.card)
+                    .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
+            )
+            .softAppear(delay: 0.12)
+
+            ProfileScoreNoteCard(
+                skinType: cleanDisplay(profile.skinType),
+                allergies: allergiesDisplay(profile.allergies),
+                theme: theme
+            )
+            .softAppear(delay: 0.16)
+
+            ThemePickerCard(selectedTheme: appState.selectedTheme) { theme in
+                withAnimation(.spring(response: 0.36, dampingFraction: 0.82)) {
+                    appState.updateTheme(theme)
+                }
+            }
+            .softAppear(delay: 0.2)
+
+            profileActions
+                .softAppear(delay: 0.26)
         }
+        .padding(.horizontal, 22)
+        .padding(.top, 24)
+        .padding(.bottom, 120)
     }
 
     private var missingProfileContent: some View {
@@ -145,7 +166,7 @@ struct ProfileView: View {
 
             Text(appState.isLoading ? "Loading profile..." : "Profile information could not be loaded.")
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundStyle(Color.black.opacity(0.7))
+                .foregroundStyle(theme.textPrimary.opacity(0.78))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
 
@@ -201,6 +222,7 @@ struct ProfileView: View {
                     .background(backgroundColor)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
+            .buttonStyle(PressableButtonStyle())
 
             Button {
                 appState.signOut()
@@ -213,6 +235,7 @@ struct ProfileView: View {
                     .background(Color(red: 0.925, green: 0.302, blue: 0.302).opacity(0.08))
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
+            .buttonStyle(PressableButtonStyle())
         }
     }
 
@@ -252,18 +275,19 @@ struct ProfileView: View {
 private struct ProfileInfoRow: View {
     let title: String
     let value: String
+    let theme: AppTheme
 
     var body: some View {
         HStack {
             Text(title)
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
-                .foregroundStyle(Color.black.opacity(0.45))
+                .foregroundStyle(theme.textSecondary)
 
             Spacer()
 
             Text(value)
                 .font(.system(size: 13, weight: .bold, design: .rounded))
-                .foregroundStyle(.black)
+                .foregroundStyle(theme.textPrimary)
         }
     }
 }
@@ -272,20 +296,21 @@ private struct ProfileMetricCard: View {
     let icon: String
     let title: String
     let value: String
+    let theme: AppTheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Image(systemName: icon)
                 .font(.system(size: 18))
-                .foregroundStyle(Color(red: 0.459, green: 0.643, blue: 0.533))
+                .foregroundStyle(theme.isDark ? theme.textPrimary : theme.brand)
 
             Text(title)
                 .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .foregroundStyle(Color.black.opacity(0.62))
+                .foregroundStyle(theme.textSecondary)
 
             Text(value)
                 .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundStyle(.black)
+                .foregroundStyle(theme.textPrimary)
                 .lineLimit(2)
                 .minimumScaleFactor(0.82)
         }
@@ -293,8 +318,140 @@ private struct ProfileMetricCard: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(red: 0.972, green: 0.978, blue: 0.975))
+                .fill(theme.panel)
         )
+    }
+}
+
+private struct ProfileScoreNoteCard: View {
+    let skinType: String
+    let allergies: String
+    let theme: AppTheme
+
+    var body: some View {
+        InSightCard(fill: theme.panel) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 10) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(theme.isDark ? theme.textPrimary : theme.gold)
+                        .frame(width: 34, height: 34)
+                        .background(theme.isDark ? Color.white.opacity(0.12) : theme.gold.opacity(0.14))
+                        .clipShape(Circle())
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("How your score is personalized")
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundStyle(theme.textPrimary)
+
+                        Text("Your skin profile helps InSight read product results more carefully.")
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .foregroundStyle(theme.textSecondary)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    ProfileScoreNoteRow(title: "Skin type", value: skinType, theme: theme)
+                    ProfileScoreNoteRow(title: "Avoid list", value: allergies, theme: theme)
+                }
+            }
+        }
+    }
+}
+
+private struct ThemePickerCard: View {
+    let selectedTheme: AppTheme
+    let onSelect: (AppTheme) -> Void
+
+    var body: some View {
+        InSightCard(fill: selectedTheme.panel) {
+            VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("App Theme")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(selectedTheme.textPrimary)
+
+                    Text("Try a different visual mood for the app.")
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(selectedTheme.textSecondary)
+                }
+
+                VStack(spacing: 10) {
+                    ForEach(AppTheme.allCases) { theme in
+                        Button {
+                            onSelect(theme)
+                        } label: {
+                            HStack(spacing: 12) {
+                                HStack(spacing: 4) {
+                                    Circle().fill(theme.brand).frame(width: 14, height: 14)
+                                    Circle().fill(theme.accent).frame(width: 14, height: 14)
+                                    Circle().fill(theme.gold).frame(width: 14, height: 14)
+                                }
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(theme.title)
+                                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                                        .foregroundStyle(selectedTheme.textPrimary)
+
+                                    Text(theme.subtitle)
+                                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                                        .foregroundStyle(selectedTheme.textSecondary)
+                                        .lineLimit(1)
+                                }
+
+                                Spacer()
+
+                                Image(systemName: selectedTheme == theme ? "checkmark.circle.fill" : "circle")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundStyle(checkmarkColor(for: theme))
+                            }
+                            .padding(12)
+                            .background(rowBackground(for: theme))
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        }
+                        .buttonStyle(PressableButtonStyle(scale: 0.97))
+                    }
+                }
+            }
+        }
+    }
+
+    private func checkmarkColor(for theme: AppTheme) -> Color {
+        if selectedTheme == theme {
+            return selectedTheme.isDark ? selectedTheme.textPrimary : theme.brand
+        }
+
+        return selectedTheme.textSecondary.opacity(0.5)
+    }
+
+    private func rowBackground(for theme: AppTheme) -> Color {
+        if selectedTheme == theme {
+            return selectedTheme.isDark ? Color.white.opacity(0.12) : theme.soft
+        }
+
+        return selectedTheme.card.opacity(0.82)
+    }
+}
+
+private struct ProfileScoreNoteRow: View {
+    let title: String
+    let value: String
+    let theme: AppTheme
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(theme.textSecondary)
+
+            Spacer()
+
+            Text(value)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(theme.textPrimary.opacity(0.86))
+                .lineLimit(2)
+                .multilineTextAlignment(.trailing)
+        }
     }
 }
 

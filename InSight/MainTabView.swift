@@ -37,7 +37,8 @@ struct MainTabView: View {
                 }
                 .tag(3)
         }
-        .tint(Color(red: 0.459, green: 0.643, blue: 0.533))
+        .tint(appState.selectedTheme.brand)
+        .animation(.spring(response: 0.36, dampingFraction: 0.86), value: selectedTab)
     }
 }
 

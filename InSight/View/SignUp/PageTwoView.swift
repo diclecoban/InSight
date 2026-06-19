@@ -9,6 +9,7 @@ import SwiftUI
 
 struct PageTwoView: View {
     @Environment(AppStateViewModel.self) private var appState
+    @Environment(\.dismiss) private var dismiss
     @State private var age = 18
     @State private var gender: String = ""
     @State private var skinType: String = ""
@@ -16,8 +17,9 @@ struct PageTwoView: View {
     @State private var selectedAllergies: Set<String> = []
     @State private var navigateToVerification = false
 
-    private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
-    private let accentColor = Color(red: 1.0, green: 0.176, blue: 0.333)
+    private var theme: AppTheme { appState.selectedTheme }
+    private var backgroundColor: Color { theme.brand }
+    private var accentColor: Color { theme.accent }
     private let genderOptions = ["Female", "Male", "Non-binary"]
     private let skinTypeOptions = ["Oily", "Karma", "Dry"]
     private let allergyOptions = ["Fragrance", "Alcohol", "Paraben", "Sulfate", "Silicone"]
@@ -32,6 +34,7 @@ struct PageTwoView: View {
 
                 Text("Sign Up")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .softAppear()
 
                 Menu {
                     ForEach(12...100, id: \.self) { option in
@@ -56,6 +59,7 @@ struct PageTwoView: View {
                     .background(Color.white.opacity(0.95))
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
+                .softAppear(delay: 0.06)
 
                 Menu {
                     ForEach(genderOptions, id: \.self) { option in
@@ -80,6 +84,7 @@ struct PageTwoView: View {
                     .background(Color.white.opacity(0.95))
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
+                .softAppear(delay: 0.09)
 
                 Menu {
                     ForEach(skinTypeOptions, id: \.self) { option in
@@ -104,6 +109,7 @@ struct PageTwoView: View {
                     .background(Color.white.opacity(0.95))
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
+                .softAppear(delay: 0.12)
 
                 Menu {
                     ForEach(allergyOptions, id: \.self) { option in
@@ -137,6 +143,7 @@ struct PageTwoView: View {
                     .background(Color.white.opacity(0.95))
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
+                .softAppear(delay: 0.15)
 
                 Button {
                     appState.updateRegistrationDraft(
@@ -166,6 +173,8 @@ struct PageTwoView: View {
                 }
                 .padding(.top, 8)
                 .disabled(appState.isLoading || gender.isEmpty || skinType.isEmpty)
+                .buttonStyle(PressableButtonStyle())
+                .softAppear(delay: 0.2)
 
                 if let errorMessage = appState.errorMessage {
                     Text(errorMessage)
@@ -192,11 +201,27 @@ struct PageTwoView: View {
                             .foregroundStyle(Color(red: 0.988, green: 0.922, blue: 0.353))
                             .fontWeight(.bold)
                     }
+                    .buttonStyle(PressableButtonStyle(scale: 0.94))
                 }
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .padding(.bottom, 28)
             }
             .padding(.horizontal, 24)
+
+            VStack {
+                HStack {
+                    OnboardingBackButton(action: {
+                        dismiss()
+                    }, tint: theme.deep)
+
+                    Spacer()
+                }
+                .padding(.horizontal, 22)
+                .padding(.top, 18)
+
+                Spacer()
+            }
+            .softAppear()
         }
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {

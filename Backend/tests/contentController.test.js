@@ -17,6 +17,9 @@ test('getSavedReviews returns saved reviews ordered by the controller query', as
                     id: '55555555-5555-4555-8555-555555555555',
                     productID: '99999999-9999-4999-8999-999999999999',
                     productName: 'Hydrating Cleanser',
+                    brand: 'InSight Demo',
+                    imageURL: 'https://example.com/product.jpg',
+                    barcode: '8691234567890',
                     status: 'safe',
                     savedAt
                 }]
@@ -41,6 +44,9 @@ test('getSavedReviews returns saved reviews ordered by the controller query', as
         id: '55555555-5555-4555-8555-555555555555',
         productID: '99999999-9999-4999-8999-999999999999',
         productName: 'Hydrating Cleanser',
+        brand: 'InSight Demo',
+        imageURL: 'https://example.com/product.jpg',
+        barcode: '8691234567890',
         status: 'safe',
         savedAt
     }]);

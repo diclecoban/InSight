@@ -9,11 +9,13 @@ import SwiftUI
 
 struct LoginView: View {
     @Environment(AppStateViewModel.self) private var appState
+    @Environment(\.dismiss) private var dismiss
     @State private var email = ""
     @State private var password = ""
 
-    private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
-    private let accentColor = Color(red: 1.0, green: 0.176, blue: 0.333)
+    private var theme: AppTheme { appState.selectedTheme }
+    private var backgroundColor: Color { theme.brand }
+    private var accentColor: Color { theme.accent }
 
     var body: some View {
         ZStack {
@@ -26,6 +28,7 @@ struct LoginView: View {
                 Text("Log In")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundStyle(.black)
+                    .softAppear()
 
                 VStack(spacing: 12) {
                     AuthField(title: "Email", text: $email)
@@ -36,6 +39,7 @@ struct LoginView: View {
                     AuthSecureField(title: "Password", text: $password)
                 }
                 .padding(.horizontal, 24)
+                .softAppear(delay: 0.08)
 
                 Button {
                     Task {
@@ -52,6 +56,8 @@ struct LoginView: View {
                 }
                 .padding(.horizontal, 24)
                 .disabled(appState.isLoading)
+                .buttonStyle(PressableButtonStyle())
+                .softAppear(delay: 0.14)
 
                 if let errorMessage = appState.errorMessage {
                     Text(errorMessage)
@@ -78,10 +84,26 @@ struct LoginView: View {
                             .foregroundStyle(Color(red: 0.988, green: 0.922, blue: 0.353))
                             .fontWeight(.bold)
                     }
+                    .buttonStyle(PressableButtonStyle(scale: 0.94))
                 }
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .padding(.bottom, 28)
             }
+
+            VStack {
+                HStack {
+                    OnboardingBackButton(action: {
+                        dismiss()
+                    }, tint: theme.deep)
+
+                    Spacer()
+                }
+                .padding(.horizontal, 22)
+                .padding(.top, 18)
+
+                Spacer()
+            }
+            .softAppear()
         }
         .toolbar(.hidden, for: .navigationBar)
     }

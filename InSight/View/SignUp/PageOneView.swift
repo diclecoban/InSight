@@ -9,14 +9,16 @@ import SwiftUI
 
 struct PageOneView: View {
     @Environment(AppStateViewModel.self) private var appState
+    @Environment(\.dismiss) private var dismiss
     @State private var email: String = ""
     @State private var firstName: String = ""
     @State private var lastName: String = ""
     @State private var password = ""
     @State private var confirmPassword: String = ""
 
-    private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
-    private let accentColor = Color(red: 1.0, green: 0.176, blue: 0.333)
+    private var theme: AppTheme { appState.selectedTheme }
+    private var backgroundColor: Color { theme.brand }
+    private var accentColor: Color { theme.accent }
 
     var body: some View {
         ZStack {
@@ -28,6 +30,7 @@ struct PageOneView: View {
 
                 Text("Sign Up")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .softAppear()
 
                 AuthField(title: "Email", text: $email)
                     .keyboardType(.emailAddress)
@@ -41,6 +44,7 @@ struct PageOneView: View {
 
                 AuthSecureField(title: "Password", text: $password)
                 AuthSecureField(title: "Confirm Password", text: $confirmPassword)
+                    .softAppear(delay: 0.08)
 
                 NavigationLink {
                     PageTwoView()
@@ -54,6 +58,8 @@ struct PageOneView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
                 .padding(.top, 6)
+                .buttonStyle(PressableButtonStyle())
+                .softAppear(delay: 0.14)
                 .simultaneousGesture(TapGesture().onEnded {
                     guard isFormValid else {
                         appState.errorMessage = String(localized: "Please fill in all fields and make sure the passwords match.")
@@ -96,11 +102,27 @@ struct PageOneView: View {
                             .foregroundStyle(Color(red: 0.988, green: 0.922, blue: 0.353))
                             .fontWeight(.bold)
                     }
+                    .buttonStyle(PressableButtonStyle(scale: 0.94))
                 }
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .padding(.bottom, 28)
             }
             .padding(.horizontal, 24)
+
+            VStack {
+                HStack {
+                    OnboardingBackButton(action: {
+                        dismiss()
+                    }, tint: theme.deep)
+
+                    Spacer()
+                }
+                .padding(.horizontal, 22)
+                .padding(.top, 18)
+
+                Spacer()
+            }
+            .softAppear()
         }
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {

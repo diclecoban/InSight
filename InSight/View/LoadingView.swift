@@ -8,13 +8,15 @@
 import SwiftUI
 
 struct LoadingView: View {
+    @Environment(AppStateViewModel.self) private var appState
+
     let title: LocalizedStringKey
     let subtitle: LocalizedStringKey
 
     @State private var animateRing = false
 
-    private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
-    private let ringColor = Color(red: 0.507, green: 0.514, blue: 0.922)
+    private var backgroundColor: Color { appState.selectedTheme.brand }
+    private var ringColor: Color { appState.selectedTheme.accent }
 
     init(
         title: LocalizedStringKey = "Please wait",
@@ -26,8 +28,7 @@ struct LoadingView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            backgroundColor
-                .ignoresSafeArea()
+            InSightScreenBackground(theme: appState.selectedTheme)
 
             VStack(spacing: 0) {
                 HStack(alignment: .top) {
@@ -55,14 +56,13 @@ struct LoadingView: View {
                 .padding(.bottom, 52)
 
                 ZStack {
-                    RoundedRectangle(cornerRadius: 34, style: .continuous)
-                        .fill(Color.white)
+                    TopRoundedPanelBackground(fill: appState.selectedTheme.surface)
                         .ignoresSafeArea(edges: .bottom)
 
                     VStack(spacing: 22) {
                         Text(title)
                             .font(.system(size: 22, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color.black.opacity(0.8))
+                            .foregroundStyle(appState.selectedTheme.textPrimary)
                             .multilineTextAlignment(.center)
                             .lineLimit(2)
                             .minimumScaleFactor(0.82)
@@ -89,7 +89,7 @@ struct LoadingView: View {
                         Text(subtitle)
                             .font(.system(size: 15, weight: .medium, design: .rounded))
                             .multilineTextAlignment(.center)
-                            .foregroundStyle(Color.black.opacity(0.62))
+                            .foregroundStyle(appState.selectedTheme.textSecondary)
                             .lineSpacing(3)
                             .lineLimit(4)
                             .minimumScaleFactor(0.82)
@@ -107,4 +107,5 @@ struct LoadingView: View {
 
 #Preview {
     LoadingView()
+        .environment(AppStateViewModel())
 }

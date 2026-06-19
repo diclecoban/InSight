@@ -4,6 +4,9 @@ const mapSavedReview = (row) => ({
     id: row.id,
     productID: row.productID,
     productName: row.productName,
+    brand: row.brand,
+    imageURL: row.imageURL || null,
+    barcode: row.barcode,
     status: row.status,
     savedAt: row.savedAt
 });
@@ -24,6 +27,9 @@ exports.getSavedReviews = async (req, res) => {
                 sr.id,
                 sr."productID" AS "productID",
                 p.name AS "productName",
+                p.brand,
+                p."imageURL" AS "imageURL",
+                p.barcode,
                 sr.status,
                 sr."savedAt"
             FROM saved_reviews sr

@@ -85,9 +85,9 @@ enum AppMockData {
     ]
 
     static let savedReviews = [
-        SavedReview(id: UUID(), productID: UUID(), productName: "Hydrating Cleanser", status: .mostlySafe, savedAt: .now),
-        SavedReview(id: UUID(), productID: UUID(), productName: "Vitamin C Serum", status: .safe, savedAt: .now),
-        SavedReview(id: UUID(), productID: UUID(), productName: "Fragrance Mist", status: .risky, savedAt: .now)
+        SavedReview(id: UUID(), productID: UUID(), productName: "Hydrating Cleanser", brand: "CeraVe", imageURL: nil, barcode: "3337875597180", status: .mostlySafe, savedAt: .now),
+        SavedReview(id: UUID(), productID: UUID(), productName: "Vitamin C Serum", brand: "La Roche-Posay", imageURL: nil, barcode: "3337875660570", status: .safe, savedAt: .now),
+        SavedReview(id: UUID(), productID: UUID(), productName: "Fragrance Mist", brand: "Demo Brand", imageURL: nil, barcode: "8691234567890", status: .risky, savedAt: .now)
     ]
 
     static let sampleScanResult = ScanResult(
@@ -108,13 +108,15 @@ enum AppMockData {
                 id: UUID(),
                 name: "Glycerin",
                 detail: "A humectant that supports hydration.",
-                riskNote: "Low risk for most skin types."
+                riskNote: "Low risk for most skin types.",
+                riskLevel: "low"
             ),
             IngredientInsight(
                 id: UUID(),
                 name: "Fragrance",
                 detail: "Used to adjust the scent profile.",
-                riskNote: "Can trigger irritation in sensitive skin."
+                riskNote: "Can trigger irritation in sensitive skin.",
+                riskLevel: "high"
             )
         ],
         scannedAt: .now

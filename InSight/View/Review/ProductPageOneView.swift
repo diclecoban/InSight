@@ -12,9 +12,10 @@ struct ProductPageOneView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var didShowSavedMessage = false
 
-    private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
-    private let primaryActionColor = Color(red: 0.208, green: 0.431, blue: 0.329)
-    private let secondaryActionColor = Color(red: 0.898, green: 0.941, blue: 0.918)
+    private var theme: AppTheme { appState.selectedTheme }
+    private var backgroundColor: Color { theme.brand }
+    private var primaryActionColor: Color { theme.deep }
+    private var secondaryActionColor: Color { theme.soft }
 
     private var scanResult: ScanResult {
         appState.latestScanResult ?? AppMockData.sampleScanResult
@@ -24,66 +25,124 @@ struct ProductPageOneView: View {
         scanResult.score
     }
 
-    private var safetyText: String {
-        scanResult.safetyLevel.title
+    private var decisionTitle: String {
+        switch scanResult.safetyLevel {
+        case .safe:
+            return String(localized: "Good match")
+        case .mostlySafe:
+            return String(localized: "Use with caution")
+        case .risky:
+            return String(localized: "Avoid for now")
+        }
+    }
+
+    private var decisionSubtitle: String {
+        if !allergyMatches.isEmpty {
+            return String.localizedStringWithFormat(
+                String(localized: "Your profile flags %@."),
+                allergyMatches.joined(separator: ", ")
+            )
+        }
+
+        if scanResult.ingredients.isEmpty {
+            return String(localized: "The product was found, but ingredient data is limited.")
+        }
+
+        return scanResult.summary
     }
 
     private var safetyColor: Color {
         scanResult.safetyLevel.color
     }
 
+    private var allergyMatches: [String] {
+        scanResult.ingredients
+            .map(\.name)
+            .filter { ingredientName in
+                appState.userProfile?.allergies.contains(where: {
+                    $0.caseInsensitiveCompare(ingredientName) == .orderedSame
+                }) ?? false
+            }
+    }
+
+    private var dataQualityText: String {
+        scanResult.ingredients.isEmpty
+            ? String(localized: "We found the product, but the ingredient list is incomplete.")
+            : String.localizedStringWithFormat(
+                String(localized: "%lld ingredients checked for skin risk"),
+                scanResult.ingredients.count
+            )
+    }
+
     var body: some View {
         GeometryReader { proxy in
             ZStack(alignment: .top) {
-                backgroundColor
-                    .ignoresSafeArea()
+                InSightScreenBackground(theme: theme)
 
-                VStack(spacing: 0) {
-                    header(topInset: proxy.safeAreaInsets.top)
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        header(topInset: proxy.safeAreaInsets.top)
+                            .softAppear()
 
-                    ZStack(alignment: .top) {
-                        RoundedRectangle(cornerRadius: 34, style: .continuous)
-                            .fill(Color.white)
-                            .ignoresSafeArea(edges: .bottom)
-
-                        ScrollView(showsIndicators: false) {
+                        VStack(spacing: 0) {
                             VStack(spacing: 22) {
                                 ProductHeroCard(product: scanResult.product, tint: safetyColor)
                                     .offset(y: -56)
                                     .padding(.bottom, -30)
+                                    .softAppear(delay: 0.04)
+
+                                DecisionSummaryCard(
+                                    product: scanResult.product,
+                                    title: decisionTitle,
+                                    subtitle: decisionSubtitle,
+                                    level: scanResult.safetyLevel,
+                                    score: score,
+                                    theme: theme
+                                )
+                                .padding(.horizontal, 22)
+                                .softAppear(delay: 0.1)
 
                                 VStack(spacing: 10) {
-                                    Text(scanResult.product.brand)
-                                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                        .foregroundStyle(Color.black.opacity(0.45))
+                                    DecisionReasonRow(
+                                        icon: "person.crop.circle.badge.checkmark",
+                                        title: "Profile match",
+                                        value: allergyMatches.isEmpty
+                                            ? String(localized: "No allergy match found")
+                                            : allergyMatches.joined(separator: ", "),
+                                        tint: allergyMatches.isEmpty ? theme.brand : InSightPalette.danger,
+                                        fill: theme.panel,
+                                        textPrimary: theme.textPrimary,
+                                        textSecondary: theme.textSecondary,
+                                        isDarkContext: theme.isDark
+                                    )
 
-                                    Text(scanResult.product.name)
-                                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                                        .foregroundStyle(.black)
-                                        .multilineTextAlignment(.center)
-                                        .padding(.horizontal, 24)
+                                    DecisionReasonRow(
+                                        icon: "list.bullet.clipboard",
+                                        title: "Ingredient info",
+                                        value: dataQualityText,
+                                        tint: scanResult.ingredients.isEmpty ? theme.gold : theme.brand,
+                                        fill: theme.panel,
+                                        textPrimary: theme.textPrimary,
+                                        textSecondary: theme.textSecondary,
+                                        isDarkContext: theme.isDark
+                                    )
 
-                                    Text(scanResult.product.barcode)
-                                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                                        .foregroundStyle(Color.black.opacity(0.5))
-
-                                    Text("This Product is")
-                                        .font(.system(size: 26, weight: .bold, design: .rounded))
-                                        .foregroundStyle(.black)
-
-                                    Text(safetyText)
-                                        .font(.system(size: 28, weight: .heavy, design: .rounded))
-                                        .foregroundStyle(safetyColor)
+                                    DecisionReasonRow(
+                                        icon: "checkmark.seal",
+                                        title: "Review basis",
+                                        value: "Reviewed with Open Beauty Facts ingredient information and InSight safety rules",
+                                        tint: primaryActionColor,
+                                        fill: theme.panel,
+                                        textPrimary: theme.textPrimary,
+                                        textSecondary: theme.textSecondary,
+                                        isDarkContext: theme.isDark
+                                    )
                                 }
-                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 22)
+                                .softAppear(delay: 0.16)
 
-                                Text(scanResult.summary)
-                                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                                    .foregroundStyle(Color.black.opacity(0.58))
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal, 28)
-
-                                SafetyBar(score: score, tint: safetyColor)
+                                SafetyBar(score: score, tint: safetyColor, theme: theme)
+                                    .softAppear(delay: 0.2)
 
                                 Button {
                                     Task {
@@ -100,7 +159,7 @@ struct ProductPageOneView: View {
                                         Text(appState.isLatestScanSaved ? String(localized: "Saved to Reviews") : String(localized: "Save Review"))
                                             .font(.system(size: 16, weight: .semibold, design: .rounded))
                                     }
-                                    .foregroundStyle(appState.isLatestScanSaved ? primaryActionColor : .white)
+                                    .foregroundStyle(appState.isLatestScanSaved ? secondaryButtonForeground : .white)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 15)
                                     .background(appState.isLatestScanSaved ? secondaryActionColor : primaryActionColor)
@@ -108,19 +167,26 @@ struct ProductPageOneView: View {
                                 }
                                 .padding(.horizontal, 24)
                                 .disabled(appState.isLoading || appState.isLatestScanSaved)
+                                .buttonStyle(PressableButtonStyle())
 
                                 NavigationLink {
                                     DetailReview()
                                 } label: {
-                                    Text("Click here to see details")
-                                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                        .foregroundStyle(primaryActionColor)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 16)
-                                        .background(secondaryActionColor)
-                                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "doc.text.magnifyingglass")
+                                            .font(.system(size: 15, weight: .bold))
+
+                                        Text("See score details")
+                                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                    }
+                                    .foregroundStyle(secondaryButtonForeground)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 16)
+                                    .background(secondaryActionColor)
+                                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                                 }
                                 .padding(.horizontal, 24)
+                                .buttonStyle(PressableButtonStyle())
 
                                 if let errorMessage = appState.errorMessage {
                                     Text(errorMessage)
@@ -131,7 +197,7 @@ struct ProductPageOneView: View {
                                 } else if didShowSavedMessage {
                                     Text("This analysis is now available in Saved Reviews.")
                                         .font(.system(size: 12, weight: .medium, design: .rounded))
-                                        .foregroundStyle(Color.black.opacity(0.5))
+                                        .foregroundStyle(theme.textSecondary)
                                         .multilineTextAlignment(.center)
                                         .padding(.horizontal, 28)
                                 }
@@ -139,8 +205,13 @@ struct ProductPageOneView: View {
                             .padding(.top, 36)
                             .padding(.bottom, 140)
                         }
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: max(0, proxy.size.height - 170), alignment: .top)
+                        .background(
+                            TopRoundedPanelBackground(fill: theme.surface)
+                        )
+                        .padding(.top, 36)
                     }
-                    .padding(.top, 36)
                 }
             }
         }
@@ -160,6 +231,7 @@ struct ProductPageOneView: View {
                     .clipShape(Circle())
             }
             .accessibilityLabel(Text("Back to Scan"))
+            .buttonStyle(PressableButtonStyle(scale: 0.9))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(greeting)
@@ -184,6 +256,10 @@ struct ProductPageOneView: View {
         .padding(.horizontal, 24)
         .padding(.top, 8)
         .padding(.bottom, 62)
+    }
+
+    private var secondaryButtonForeground: Color {
+        theme.isDark ? theme.textPrimary : primaryActionColor
     }
 }
 
@@ -264,16 +340,107 @@ private struct ProductHeroCard: View {
     }
 }
 
+private struct DecisionSummaryCard: View {
+    let product: Product
+    let title: String
+    let subtitle: String
+    let level: SafetyLevel
+    let score: Double
+    let theme: AppTheme
+
+    var body: some View {
+        InSightCard(fill: theme.card) {
+            VStack(spacing: 14) {
+                StatusPill(level: level)
+
+                VStack(spacing: 7) {
+                    Text(product.brand)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(theme.textSecondary)
+                        .lineLimit(1)
+
+                    Text(product.name)
+                        .font(.system(size: 19, weight: .bold, design: .rounded))
+                        .foregroundStyle(theme.textPrimary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(3)
+
+                    Text(product.barcode)
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(theme.textSecondary)
+                }
+
+                VStack(spacing: 6) {
+                    Text(title)
+                        .font(.system(size: 28, weight: .heavy, design: .rounded))
+                        .foregroundStyle(level.color)
+                        .multilineTextAlignment(.center)
+
+                    Text(subtitle)
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(theme.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(3)
+                }
+
+                Text("\(Int(score * 100))%")
+                    .font(.system(size: 36, weight: .heavy, design: .rounded))
+                    .foregroundStyle(level.color)
+                    .accessibilityLabel(Text("Safety score \(Int(score * 100)) percent"))
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+}
+
+private struct DecisionReasonRow: View {
+    let icon: String
+    let title: String
+    let value: String
+    let tint: Color
+    var fill: Color = InSightPalette.panel
+    var textPrimary: Color = .black
+    var textSecondary: Color = Color.black.opacity(0.48)
+    var isDarkContext = false
+
+    var body: some View {
+        InSightCard(fill: fill, cornerRadius: 18) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(isDarkContext ? textPrimary : tint)
+                    .frame(width: 34, height: 34)
+                    .background(isDarkContext ? Color.white.opacity(0.12) : tint.opacity(0.12))
+                    .clipShape(Circle())
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(textSecondary)
+
+                    Text(value)
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(textPrimary.opacity(0.82))
+                        .lineLimit(2)
+                }
+
+                Spacer(minLength: 0)
+            }
+        }
+    }
+}
+
 private struct SafetyBar: View {
     let score: Double
     let tint: Color
+    let theme: AppTheme
 
     var body: some View {
         VStack(spacing: 10) {
             HStack {
                 Text("Safety Score")
                     .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color.black.opacity(0.55))
+                    .foregroundStyle(theme.textSecondary)
 
                 Spacer()
 
@@ -285,12 +452,13 @@ private struct SafetyBar: View {
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(Color.black.opacity(0.08))
+                        .fill(theme.textSecondary.opacity(theme.isDark ? 0.18 : 0.14))
                         .frame(height: 10)
 
                     Capsule()
                         .fill(tint)
                         .frame(width: geometry.size.width * score, height: 10)
+                        .animation(.spring(response: 0.7, dampingFraction: 0.82), value: score)
                 }
             }
             .frame(height: 10)

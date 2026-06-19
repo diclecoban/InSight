@@ -11,8 +11,9 @@ struct DetailReview: View {
     @Environment(AppStateViewModel.self) private var appState
     @Environment(\.dismiss) private var dismiss
 
-    private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
-    private let accentColor = Color(red: 0.953, green: 0.643, blue: 0.286)
+    private var theme: AppTheme { appState.selectedTheme }
+    private var backgroundColor: Color { theme.brand }
+    private var accentColor: Color { theme.gold }
 
     private var scanResult: ScanResult {
         appState.latestScanResult ?? AppMockData.sampleScanResult
@@ -28,32 +29,28 @@ struct DetailReview: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack(alignment: .top) {
-                backgroundColor
-                    .ignoresSafeArea()
+                InSightScreenBackground(theme: theme)
 
-                VStack(spacing: 0) {
-                    header(topInset: proxy.safeAreaInsets.top)
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        header(topInset: proxy.safeAreaInsets.top)
+                            .softAppear()
 
-                    ZStack(alignment: .top) {
-                        RoundedRectangle(cornerRadius: 34, style: .continuous)
-                            .fill(Color.white)
-                            .ignoresSafeArea(edges: .bottom)
-
-                        ScrollView(showsIndicators: false) {
+                        VStack(spacing: 0) {
                             VStack(alignment: .leading, spacing: 18) {
                                 HStack(spacing: 16) {
-                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                        .fill(Color.black.opacity(0.06))
-                                        .frame(width: 96, height: 112)
-                                        .overlay {
-                                            Image(systemName: "doc.text.image.fill")
-                                                .font(.system(size: 32))
-                                                .foregroundStyle(accentColor)
-                                        }
+                                    ProductThumbnail(
+                                        imageURL: scanResult.product.imageURL,
+                                        brand: scanResult.product.brand,
+                                        tint: scanResult.safetyLevel.color,
+                                        size: 96,
+                                        isDarkContext: theme.isDark
+                                    )
 
                                     VStack(alignment: .leading, spacing: 8) {
                                         Text(scanResult.product.name)
                                             .font(.system(size: 19, weight: .bold, design: .rounded))
+                                            .foregroundStyle(theme.textPrimary)
                                             .lineLimit(2)
 
                                         Text(scoreText)
@@ -62,7 +59,7 @@ struct DetailReview: View {
 
                                         Text(scanResult.summary)
                                             .font(.system(size: 12, weight: .medium, design: .rounded))
-                                            .foregroundStyle(Color.black.opacity(0.6))
+                                            .foregroundStyle(theme.textSecondary)
                                     }
 
                                     Spacer()
@@ -70,36 +67,50 @@ struct DetailReview: View {
                                 .padding(18)
                                 .background(
                                     RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                        .fill(Color.white)
+                                        .fill(theme.card)
                                         .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 4)
                                 )
+                                .softAppear(delay: 0.06)
 
-                                DetailSection(title: "Overview") {
-                                    Text(scanResult.summary)
+                                DetailSection(title: "Overview", theme: theme) {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text(scanResult.summary)
+
+                                        Text("This result is based on Open Beauty Facts ingredient information and InSight safety rules.")
+                                            .foregroundStyle(theme.textSecondary)
+                                    }
                                 }
+                                .softAppear(delay: 0.12)
 
-                                DetailSection(title: "Ingredients") {
+                                DetailSection(title: "Ingredients", theme: theme) {
                                     if scanResult.ingredients.isEmpty {
                                         Text("No ingredient details were found for this product.")
                                     } else {
                                         ForEach(scanResult.ingredients) { ingredient in
-                                            IngredientDetailRow(ingredient: ingredient)
+                                            IngredientDetailRow(ingredient: ingredient, theme: theme)
                                         }
                                     }
                                 }
+                                .softAppear(delay: 0.18)
 
-                                DetailSection(title: "Why It Matters") {
+                                DetailSection(title: "Why It Matters", theme: theme) {
                                     Text(personalizedExplanation)
                                 }
+                                .softAppear(delay: 0.24)
                             }
                             .font(.system(size: 13, weight: .medium, design: .rounded))
-                            .foregroundStyle(Color.black.opacity(0.72))
+                            .foregroundStyle(theme.textPrimary.opacity(0.82))
                             .padding(.horizontal, 22)
                             .padding(.top, 24)
                             .padding(.bottom, 120)
                         }
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: max(0, proxy.size.height - 150), alignment: .top)
+                        .background(
+                            TopRoundedPanelBackground(fill: theme.surface)
+                        )
+                        .padding(.top, 20)
                     }
-                    .padding(.top, 20)
                 }
             }
         }
@@ -119,6 +130,7 @@ struct DetailReview: View {
                     .clipShape(Circle())
             }
             .accessibilityLabel(Text("Back to Results"))
+            .buttonStyle(PressableButtonStyle(scale: 0.9))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(greeting)
@@ -155,7 +167,7 @@ struct DetailReview: View {
             }
 
         if allergyMatches.isEmpty {
-            return String(localized: "The score is based on the ingredient risk notes available for this product.")
+            return String(localized: "The score compares the listed ingredients with common skin-risk signals and your profile preferences.")
         }
 
         return String.localizedStringWithFormat(
@@ -167,13 +179,14 @@ struct DetailReview: View {
 
 private struct DetailSection<Content: View>: View {
     let title: String
+    let theme: AppTheme
     @ViewBuilder let content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
                 .font(.system(size: 15, weight: .bold, design: .rounded))
-                .foregroundStyle(.black)
+                .foregroundStyle(theme.textPrimary)
 
             content
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -182,7 +195,7 @@ private struct DetailSection<Content: View>: View {
         .padding(18)
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color.white)
+                .fill(theme.card)
                 .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
         )
     }
@@ -190,21 +203,45 @@ private struct DetailSection<Content: View>: View {
 
 private struct IngredientDetailRow: View {
     let ingredient: IngredientInsight
+    let theme: AppTheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(ingredient.name)
-                .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundStyle(.black)
+            HStack {
+                Text(ingredient.name)
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(theme.textPrimary)
+
+                Spacer()
+
+                Text(ingredient.riskLevel.capitalized)
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(riskColor)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(riskColor.opacity(0.1))
+                    .clipShape(Capsule())
+            }
 
             Text(ingredient.detail)
-                .foregroundStyle(Color.black.opacity(0.68))
+                .foregroundStyle(theme.textPrimary.opacity(0.78))
 
             Text(ingredient.riskNote)
-                .foregroundStyle(Color.black.opacity(0.52))
+                .foregroundStyle(theme.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 4)
+    }
+
+    private var riskColor: Color {
+        switch ingredient.riskLevel.lowercased() {
+        case "high":
+            return InSightPalette.danger
+        case "medium":
+            return InSightPalette.gold
+        default:
+            return theme.brand
+        }
     }
 }
 

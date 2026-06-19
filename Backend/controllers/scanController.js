@@ -71,6 +71,74 @@ const calculateScore = (ingredients) => {
     return Math.max(0.05, Math.min(1, 1 - penalty));
 };
 
+const clampScore = (score) => Math.max(0.05, Math.min(1, score));
+
+const normalizeText = (value) => String(value || '').trim().toLowerCase();
+
+const getPersonalization = async (client, userID, ingredients) => {
+    if (!userID) {
+        return {
+            scorePenalty: 0,
+            allergyMatches: [],
+            sensitiveSkinPenalty: false
+        };
+    }
+
+    const profileResult = await client.query(
+        `
+        SELECT "skinType", sensitivity, COALESCE(allergies, ARRAY[]::text[]) AS allergies
+        FROM profiles
+        WHERE "userID" = $1
+        `,
+        [userID]
+    );
+
+    const profile = profileResult.rows[0];
+    if (!profile) {
+        return {
+            scorePenalty: 0,
+            allergyMatches: [],
+            sensitiveSkinPenalty: false
+        };
+    }
+
+    const ingredientNames = ingredients.map((ingredient) => normalizeText(ingredient.name));
+    const allergyMatches = (profile.allergies || [])
+        .map((allergy) => String(allergy).trim())
+        .filter((allergy) => ingredientNames.includes(normalizeText(allergy)));
+    const hasSensitiveSkin = [profile.skinType, profile.sensitivity]
+        .map(normalizeText)
+        .some((value) => value.includes('sensitive') || value.includes('hassas') || value.includes('high'));
+    const hasHigherRiskIngredient = ingredients.some((ingredient) => (
+        ingredient.riskLevel === 'high' || ingredient.riskLevel === 'medium'
+    ));
+
+    return {
+        scorePenalty: Math.min(0.4, allergyMatches.length * 0.22 + (hasSensitiveSkin && hasHigherRiskIngredient ? 0.1 : 0)),
+        allergyMatches,
+        sensitiveSkinPenalty: hasSensitiveSkin && hasHigherRiskIngredient
+    };
+};
+
+const personalizedSummary = (score, locale, personalization) => {
+    const baseSummary = summaries[locale](score);
+
+    if (personalization.allergyMatches.length > 0) {
+        const ingredients = personalization.allergyMatches.join(', ');
+        return locale === 'tr'
+            ? `${baseSummary} Profilindeki alerji bilgisi nedeniyle ${ingredients} için ekstra dikkat önerilir.`
+            : `${baseSummary} Your profile flags ${ingredients}, so extra caution is recommended.`;
+    }
+
+    if (personalization.sensitiveSkinPenalty) {
+        return locale === 'tr'
+            ? `${baseSummary} Hassas cilt profili nedeniyle riskli içerikler skora yansıtıldı.`
+            : `${baseSummary} Your sensitive-skin profile was included in the score.`;
+    }
+
+    return baseSummary;
+};
+
 const enrichIngredient = (ingredient) => {
     const classification = classifyIngredient(ingredient.name);
     const hasSpecificDetail = ingredient.detail &&
@@ -95,11 +163,12 @@ const localizeIngredient = (ingredient, locale) => {
         id: ingredient.id,
         name: ingredient.name,
         detail: translation?.detail || ingredient.detail,
-        riskNote: translation?.riskNote || ingredient.riskNote
+        riskNote: translation?.riskNote || ingredient.riskNote,
+        riskLevel: ingredient.riskLevel
     };
 };
 
-const mapScanResult = (scan, product, ingredients, score, locale) => {
+const mapScanResult = (scan, product, ingredients, score, locale, personalization) => {
     const safetyLevel = safetyFromScore(score);
 
     return {
@@ -115,7 +184,7 @@ const mapScanResult = (scan, product, ingredients, score, locale) => {
         source: scan.source,
         score,
         safetyLevel,
-        summary: summaries[locale](score, safetyLevel),
+        summary: personalizedSummary(score, locale, personalization),
         ingredients: ingredients.map((ingredient) => localizeIngredient(ingredient, locale)),
         scannedAt: scan.scannedAt
     };
@@ -242,7 +311,8 @@ exports.analyzeBarcode = async (req, res) => {
         }
 
         const ingredients = await getProductIngredients(client, product.id);
-        const score = calculateScore(ingredients);
+        const personalization = await getPersonalization(client, userID, ingredients);
+        const score = clampScore(calculateScore(ingredients) - personalization.scorePenalty);
         const safetyLevel = safetyFromScore(score);
 
         const scanResult = await client.query(
@@ -261,7 +331,8 @@ exports.analyzeBarcode = async (req, res) => {
             product,
             ingredients,
             score,
-            locale
+            locale,
+            personalization
         ));
     } catch (error) {
         await client.query('ROLLBACK');

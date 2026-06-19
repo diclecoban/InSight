@@ -73,28 +73,9 @@ struct ScanView: View {
                 }
 
                 if let errorMessage = appState.errorMessage {
-                    VStack(spacing: 10) {
-                        Text(errorMessage)
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.white)
-                            .multilineTextAlignment(.center)
-
-                        Button {
-                            resetScanForRetry()
-                        } label: {
-                            Text("Try Again")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                                .foregroundStyle(.black)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(Color.white.opacity(0.92))
-                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        }
+                    ScanProblemCard(message: errorMessage) {
+                        resetScanForRetry()
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .background(Color(red: 0.925, green: 0.302, blue: 0.302).opacity(0.86))
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .padding(.horizontal, 24)
                 } else if isAnalyzingScan {
                     Text("Analyzing \(scannedCode)")
@@ -111,6 +92,7 @@ struct ScanView: View {
                 manualBarcodeEntry
                     .padding(.horizontal, 24)
                     .padding(.bottom, 12)
+                    .softAppear(delay: 0.1)
 
                 HStack {
                     Spacer()
@@ -120,6 +102,7 @@ struct ScanView: View {
                     } label: {
                         ActionIcon(symbol: scanner.isFlashOn ? "bolt.fill" : "bolt.slash.fill")
                     }
+                    .buttonStyle(PressableButtonStyle(scale: 0.9))
                 }
                 .padding(.horizontal, 34)
                 .padding(.bottom, 34)
@@ -195,6 +178,7 @@ struct ScanView: View {
             }
             .disabled(manualBarcode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isAnalyzingScan)
             .opacity(manualBarcode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.55 : 1)
+            .buttonStyle(PressableButtonStyle(scale: 0.92))
         }
     }
 
@@ -244,6 +228,57 @@ private struct ActionIcon: View {
             .font(.system(size: 20, weight: .semibold))
             .foregroundStyle(.white)
             .frame(width: 44, height: 44)
+    }
+}
+
+private struct ScanProblemCard: View {
+    let message: String
+    let retry: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: "barcode.viewfinder")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(InSightPalette.gold)
+                    .frame(width: 34, height: 34)
+                    .background(InSightPalette.gold.opacity(0.14))
+                    .clipShape(Circle())
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Product not ready yet")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(.black)
+
+                    Text(message)
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.black.opacity(0.62))
+                        .lineLimit(2)
+                }
+            }
+
+            Text("Try scanning from another angle or enter the barcode manually.")
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(Color.black.opacity(0.56))
+                .lineSpacing(3)
+
+            Button(action: retry) {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.clockwise")
+                    Text("Try Again")
+                }
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(InSightPalette.deepGreen)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(PressableButtonStyle())
+        }
+        .padding(16)
+        .background(Color.white.opacity(0.96))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }
 

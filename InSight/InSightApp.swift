@@ -72,6 +72,7 @@ struct InSightApp: App {
         WindowGroup {
             ContentView()
                 .environment(appState)
+                .preferredColorScheme(appState.selectedTheme.isDark ? .dark : .light)
                 .task {
                     await appState.bootstrap()
                 }

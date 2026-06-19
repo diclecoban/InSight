@@ -8,6 +8,145 @@ yapilan degisiklikler, etkiledigi dosyalar ve dogrulama adimlari yazilacak.
 
 ---
 
+## 19 Haziran 2026 - Profile, Scan ve Saved Review Iyilestirmeleri
+
+Commit: `fb23be9`
+
+### Genel Ozet
+
+- Gercek cihaz testlerinde ortaya cikan profile, scan, saved review ve UI
+  yerlesim problemleri giderildi.
+- Barkod scan sonucu, urun detaylari, kaydetme akisi ve profile edit deneyimi
+  daha gercek backend verisiyle calisacak hale getirildi.
+- Farkli Wi-Fi aginda gercek cihaz testleri icin lokal API IP ayari
+  guncellendi.
+
+### Backend Degisiklikleri
+
+- Open Beauty Facts entegrasyonu scan akisina baglandi.
+- Lokal DB'de olmayan barkodlarda urun Open Beauty Facts'ten cekilip
+  `products`, `ingredients` ve `product_ingredients` tablolarina yazilacak
+  hale getirildi.
+- Urun fotografi icin `imageURL` alani eklendi.
+- `006_add_product_image_url.sql` migration'i eklendi ve uygulandi.
+- Email degisimi icin iki asamali OTP altyapisi eklendi:
+  - once mevcut email adresine kod gonderme,
+  - mevcut email kodunu dogrulama,
+  - yeni email adresine kod gonderme,
+  - yeni email kodunu dogrulayip email'i guncelleme.
+- Email degisimi icin `email_change_requests` tablosu ve
+  `007_add_email_change_requests.sql` migration'i eklendi ve uygulandi.
+- Profile response icine `gender` alani eklendi.
+- Content/profile route'larinda token kullanicisi esas alinarak `Forbidden`
+  hatalari giderildi.
+- Saved review listesi artik `productID` donduruyor; iOS tarafinda ayni isimli
+  urunler karismasin diye kayit kontrolu product ID ile yapiliyor.
+- Risk siniflandirma icin ilk basit icerik heuristikleri eklendi.
+
+### iOS Degisiklikleri
+
+- Gercek cihaz icin `API_BASE_URL` yeni Wi-Fi IP adresine guncellendi:
+  `http://192.168.1.119:3000`.
+- Backend logundaki `From Network` IP bilgisi ayni adrese cekildi.
+- Scan ekranina manuel barkod girisi eklendi.
+- Barkod bulunamadiginda yanlis sekilde basarili scan mesaji gosterilmesi
+  engellendi.
+- Farkli barkodlarda onceki urun sonucunun tekrar gosterilmesi problemi
+  giderildi.
+- Scan hata durumunda retry akisi iyilestirildi.
+- Barkod sonucundan scan ekranina donebilmek icin geri butonu eklendi.
+- Urun detay ekranina geri butonu eklendi.
+- Urun sonucunda urun adi, barkod ve fotograf bilgisi gosterimi iyilestirildi.
+- `Save Review` butonu gercek backend saved review akisina baglandi.
+- Saved Reviews listesi DB'den cekilen kayitlarla guncellenir hale getirildi.
+- Welcome sayfasi animasyonlu ve daha dolu bir tasarima cekildi.
+- Home, Profile, Saved Reviews, urun sonuc ve detay ekranlarinda safe-area
+  sorunlari giderildi.
+- Home ve urun sonuc ekranlari kucuk ekranlarda asagi kaydirilabilir hale
+  getirildi.
+- Input text/prompt renkleri okunabilir hale getirildi.
+
+### Profile Degisiklikleri
+
+- Profile ekrani placeholder veriler yerine gercek kullanici bilgisini
+  gosterecek hale getirildi.
+- Header altinda email yerine ad soyad gosterimi duzeltildi.
+- `Condition` ve `Sensitivity` alanlari kayit sirasinda sorulmadigi icin
+  profile ekranindan ve edit ekranindan kaldirildi.
+- Edit Profile ekrani uygulama tasarimina uygun bolumlu bir forma
+  donusturuldu:
+  - Basic Information,
+  - Skin Profile,
+  - Allergy Notes,
+  - Email Address.
+- Age ve Gender editlenebilir hale getirildi.
+- Age secimi ozel `- / yas / +` kontrolune cevrildi.
+- Allergies serbest metin yerine coklu secim chip listesine cevrildi.
+- Yaygin alerji/reaksiyon secenekleri eklendi:
+  - Fragrance
+  - Essential Oils
+  - Alcohol Denat.
+  - Parabens
+  - Sulfates
+  - SLS
+  - Lanolin
+  - Nickel
+  - Latex
+  - Benzoyl Peroxide
+  - Salicylic Acid
+  - Retinoids
+  - Formaldehyde Releasers
+  - Methylisothiazolinone
+  - Cocamidopropyl Betaine
+  - Propylene Glycol
+
+### Dogrulamalar
+
+Calistirilan kontroller:
+
+```sh
+cd Backend
+npm test
+```
+
+Sonuc:
+
+```text
+22 test gecti.
+0 test basarisiz.
+```
+
+```sh
+xcodebuild -scheme InSight -project InSight.xcodeproj -destination generic/platform=iOS -derivedDataPath /private/tmp/InSightDerivedData CODE_SIGNING_ALLOWED=NO build
+```
+
+Sonuc:
+
+```text
+BUILD SUCCEEDED
+```
+
+```sh
+cd Backend
+npm run migrate
+```
+
+Sonuc:
+
+```text
+007_add_email_change_requests.sql uygulandi.
+```
+
+### Notlar
+
+- Backend degisiklikleri sonrasinda `node index.js` yeniden baslatilmali.
+- Email degisimi icin OTP mailleri gercek email konfiguru calisiyorsa mail
+  olarak gider; lokal test sirasinda kodlar backend terminal loglarindan da
+  izlenebilir.
+- Bu kayit, `fb23be9` commitinden sonra `TODAY_PROGRESS.md` icine eklendi.
+
+---
+
 ## Gecmis Commit/Push Kayitlari
 
 Bu bolum Git gecmisinden geriye donuk olarak olusturuldu. Git, "push zamani"

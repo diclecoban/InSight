@@ -43,6 +43,13 @@ test('analyzeBarcode returns a personalized scan result for an existing product'
             },
             {
                 rows: [{
+                    skinType: 'Sensitive',
+                    sensitivity: 'High',
+                    allergies: ['Fragrance']
+                }]
+            },
+            {
+                rows: [{
                     id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
                     source: 'barcode',
                     scannedAt
@@ -76,7 +83,8 @@ test('analyzeBarcode returns a personalized scan result for an existing product'
     assert.equal(res.body.id, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc');
     assert.equal(res.body.product.id, product.id);
     assert.equal(res.body.source, 'barcode');
-    assert.equal(res.body.safetyLevel, 'mostlySafe');
+    assert.equal(res.body.safetyLevel, 'risky');
+    assert.match(res.body.summary, /Fragrance/);
     assert.equal(res.body.ingredients.length, 2);
 });
 

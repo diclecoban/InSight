@@ -222,6 +222,9 @@ private struct SavedReviewResponse: Decodable {
     let id: UUID
     let productID: UUID
     let productName: String
+    let brand: String
+    let imageURL: URL?
+    let barcode: String
     let status: SafetyLevelResponse
     let savedAt: Date
 
@@ -230,6 +233,9 @@ private struct SavedReviewResponse: Decodable {
             id: id,
             productID: productID,
             productName: productName,
+            brand: brand,
+            imageURL: imageURL,
+            barcode: barcode,
             status: status.toDomain(),
             savedAt: savedAt
         )
@@ -303,13 +309,15 @@ private struct IngredientInsightResponse: Decodable {
     let name: String
     let detail: String
     let riskNote: String
+    let riskLevel: String
 
     func toDomain() -> IngredientInsight {
         IngredientInsight(
             id: id,
             name: name,
             detail: detail,
-            riskNote: riskNote
+            riskNote: riskNote,
+            riskLevel: riskLevel
         )
     }
 }

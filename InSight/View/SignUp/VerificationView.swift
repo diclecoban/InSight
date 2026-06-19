@@ -2,11 +2,13 @@ import SwiftUI
 
 struct VerificationView: View {
     @Environment(AppStateViewModel.self) private var appState
+    @Environment(\.dismiss) private var dismiss
     @State private var otpFields = ["", "", "", "", "", ""]
     @FocusState private var focusedField: Int?
 
-    private let backgroundColor = Color(red: 0.459, green: 0.643, blue: 0.533)
-    private let accentColor = Color(red: 1.0, green: 0.176, blue: 0.333)
+    private var theme: AppTheme { appState.selectedTheme }
+    private var backgroundColor: Color { theme.brand }
+    private var accentColor: Color { theme.accent }
 
     var body: some View {
         ZStack {
@@ -18,12 +20,14 @@ struct VerificationView: View {
 
                 Text("Verification")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .softAppear()
 
                 Text("We sent you an email. Please check your inbox and complete the OTP code.")
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundStyle(Color.black.opacity(0.7))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
+                    .softAppear(delay: 0.06)
 
                 HStack(spacing: 8) {
                     ForEach(0..<6, id: \.self) { index in
@@ -58,6 +62,7 @@ struct VerificationView: View {
                             }
                     }
                 }
+                .softAppear(delay: 0.12)
 
                 Button {
                     let code = otpFields.joined()
@@ -75,6 +80,8 @@ struct VerificationView: View {
                 }
                 .padding(.horizontal, 24)
                 .disabled(appState.isLoading)
+                .buttonStyle(PressableButtonStyle())
+                .softAppear(delay: 0.18)
 
                 if let errorMessage = appState.errorMessage {
                     Text(errorMessage)
@@ -101,10 +108,26 @@ struct VerificationView: View {
                             .foregroundStyle(Color(red: 0.988, green: 0.922, blue: 0.353))
                             .fontWeight(.bold)
                     }
+                    .buttonStyle(PressableButtonStyle(scale: 0.94))
                 }
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .padding(.bottom, 28)
             }
+
+            VStack {
+                HStack {
+                    OnboardingBackButton(action: {
+                        dismiss()
+                    }, tint: theme.deep)
+
+                    Spacer()
+                }
+                .padding(.horizontal, 22)
+                .padding(.top, 18)
+
+                Spacer()
+            }
+            .softAppear()
         }
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {
